@@ -6,27 +6,92 @@
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
-body { font-family: Arial; padding: 20px; }
-table { border-collapse: collapse; width: 100%; }
-td, th { border: 1px solid #ccc; padding: 10px; text-align: center; }
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  padding: 15px;
+}
 
-.done { background: #c8f7c5; }
+h2 {
+  text-align: center;
+}
+
+.box {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 15px;
+}
+
+input {
+  padding: 10px;
+  margin: 5px;
+  width: 40%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+button {
+  padding: 10px 15px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th {
+  background: #007bff;
+  color: white;
+  padding: 10px;
+}
+
+td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+}
+
+tr.done {
+  background: #d4edda;
+}
 
 .tick {
+  font-size: 20px;
   cursor: pointer;
-  font-size: 18px;
+  font-weight: bold;
 }
+
+.green { color: green; }
+.red { color: red; }
+
 </style>
 </head>
 
 <body>
 
-<h2>Quản lý công việc xưởng</h2>
+<h2>📦 Quản lý công việc xưởng</h2>
 
-<input id="name" placeholder="Tên sản phẩm">
-<input id="worker" placeholder="Người làm">
-<button onclick="add()">Thêm</button>
+<div class="box">
+  <input id="name" placeholder="Tên sản phẩm">
+  <input id="worker" placeholder="Người làm">
+  <button onclick="add()">➕ Thêm</button>
+</div>
 
+<div class="box">
 <table>
   <thead>
     <tr>
@@ -41,6 +106,7 @@ td, th { border: 1px solid #ccc; padding: 10px; text-align: center; }
   </thead>
   <tbody id="table"></tbody>
 </table>
+</div>
 
 <script>
 const socket = io();
@@ -51,7 +117,6 @@ socket.on("data", (data) => {
   render();
 });
 
-// thêm sản phẩm
 function add() {
   let name = document.getElementById("name").value;
   let worker = document.getElementById("worker").value;
@@ -72,17 +137,15 @@ function add() {
   document.getElementById("worker").value = "";
 }
 
-// click tick
 function toggle(i, field) {
   socket.emit("toggle", { index: i, field });
 }
 
-// render bảng
 function render() {
   let html = "";
 
   tasks.forEach((t, i) => {
-    // fix dữ liệu cũ
+
     t.cat = t.cat || false;
     t.dan = t.dan || false;
     t.son = t.son || false;
@@ -94,23 +157,23 @@ function render() {
         <td>${t.name}</td>
         <td>${t.worker}</td>
 
-        <td class="tick" style="color:${t.cat?'green':'red'}" onclick="toggle(${i},'cat')">
+        <td class="tick ${t.cat?'green':'red'}" onclick="toggle(${i},'cat')">
           ${t.cat ? '✔' : '✘'}
         </td>
 
-        <td class="tick" style="color:${t.dan?'green':'red'}" onclick="toggle(${i},'dan')">
+        <td class="tick ${t.dan?'green':'red'}" onclick="toggle(${i},'dan')">
           ${t.dan ? '✔' : '✘'}
         </td>
 
-        <td class="tick" style="color:${t.son?'green':'red'}" onclick="toggle(${i},'son')">
+        <td class="tick ${t.son?'green':'red'}" onclick="toggle(${i},'son')">
           ${t.son ? '✔' : '✘'}
         </td>
 
-        <td class="tick" style="color:${t.lap?'green':'red'}" onclick="toggle(${i},'lap')">
+        <td class="tick ${t.lap?'green':'red'}" onclick="toggle(${i},'lap')">
           ${t.lap ? '✔' : '✘'}
         </td>
 
-        <td>${t.done ? '✔' : ''}</td>
+        <td class="tick">${t.done ? '✔' : ''}</td>
       </tr>
     `;
   });
