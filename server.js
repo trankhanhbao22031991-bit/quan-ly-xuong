@@ -22,22 +22,33 @@ function save(data) {
 
 let tasks = load();
 
+// serve giao diện
 app.use(express.static("public"));
 
 io.on("connection", (socket) => {
+  console.log("User connected");
+
   socket.emit("data", tasks);
 
+  // thêm task
   socket.on("add", (task) => {
-    tasks.push(task);
+    tasks.push({
+      name: task.name,
+      worker: task.worker,
+      cat: false,
+      dan: false,
+      son: false,
+      lap: false,
+      done: false
+    });
+
     save(tasks);
     io.emit("data", tasks);
   });
 
+  // toggle công đoạn
   socket.on("toggle", ({ index, field }) => {
-    // đảm bảo field tồn tại
-    if (tasks[index][field] === undefined) {
-      tasks[index][field] = false;
-    }
+    if (!tasks[index]) return;
 
     tasks[index][field] = !tasks[index][field];
 
@@ -56,10 +67,14 @@ io.on("connection", (socket) => {
     save(tasks);
     io.emit("data", tasks);
   });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
 });
 
-server.listen(3000, () => {
-  const PORT = process.env.PORT || 3000;
+// 🔥 QUAN TRỌNG CHO RENDER
+const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log("Server running on port " + PORT);
