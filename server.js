@@ -6,21 +6,12 @@ const fs = require("fs");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" },
-  pingTimeout: 60000,
-  pingInterval: 25000
+  cors: { origin: "*" }
 });
 
 const FILE = "tasks.json";
 
-/* ================= USERS ================= */
-const users = [
-  { username: "admin", password: "123456", role: "admin" },
-  { username: "tho1", password: "123456", role: "worker" },
-  { username: "tho2", password: "123456", role: "worker" }
-];
-
-/* ================= LOAD / SAVE ================= */
+/* LOAD / SAVE */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
@@ -38,42 +29,13 @@ let tasks = load();
 
 app.use(express.static("public"));
 
-/* ================= SOCKET ================= */
 io.on("connection", (socket) => {
 
-  socket.role = null;
+  // gửi data khi vào
+  socket.emit("data", tasks);
 
-  /* LOGIN */
-  socket.on("login", ({ username, password }) => {
-
-    const user = users.find(
-      u => u.username === username && u.password === password
-    );
-
-    if (!user) {
-      socket.emit("login_fail");
-      return;
-    }
-
-    socket.role = user.role;
-
-    socket.emit("login_success", user);
-    socket.emit("data", tasks);
-  });
-
-  /* REQUEST DATA */
-  socket.on("request_data", () => {
-    socket.emit("data", tasks);
-  });
-
-  /* ADD TASK */
+  // thêm đơn
   socket.on("add", (task) => {
-
-    if (socket.role !== "admin") {
-      socket.emit("error_msg", "No permission");
-      return;
-    }
-
     if (!task?.name) return;
 
     tasks.push({
@@ -94,16 +56,15 @@ io.on("connection", (socket) => {
     io.emit("data", tasks);
   });
 
-  /* TOGGLE */
+  // tick công đoạn + đã giao
   socket.on("toggle", ({ index, field }) => {
 
     const t = tasks[index];
     if (!t) return;
 
-    if (field === "delivered" && socket.role !== "admin") return;
-
     t[field] = !t[field];
 
+    // tự check done
     t.done =
       t.cat &&
       t.dan &&
