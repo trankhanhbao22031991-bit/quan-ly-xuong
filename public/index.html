@@ -107,50 +107,64 @@ tr.done { background:#dcfce7; }
 const socket = io();
 let tasks = [];
 
+/* ===================== DATA ===================== */
 socket.on("data", (data) => {
-  tasks = data;
+  tasks = data || [];
   render();
 });
 
+/* ===================== ADD SAFE ===================== */
 function add() {
-  if (!name.value) return;
+  const nameEl = document.getElementById("name");
+  const noteEl = document.getElementById("note");
+  const receivedEl = document.getElementById("received");
+  const deliveryEl = document.getElementById("delivery");
+
+  const name = nameEl.value.trim();
+  const note = noteEl.value.trim();
+  const received = receivedEl.value;
+  const delivery = deliveryEl.value;
+
+  if (!name) return alert("Nhập tên sản phẩm");
 
   socket.emit("add", {
-    name: name.value,
-    note: note.value,
-    received: received.value,
-    delivery: delivery.value
+    name,
+    note,
+    received,
+    delivery
   });
 
-  name.value = "";
-  note.value = "";
-  received.value = "";
-  delivery.value = "";
+  nameEl.value = "";
+  noteEl.value = "";
+  receivedEl.value = "";
+  deliveryEl.value = "";
 }
 
+/* ===================== TOGGLE ===================== */
 function toggle(i, field) {
   socket.emit("toggle", { index: i, field });
 }
 
+/* ===================== RENDER ===================== */
 function render() {
   let html = "";
   let doneHtml = "";
 
   tasks.forEach((t, i) => {
 
-    // default tránh lỗi dữ liệu cũ
-    t.cat = t.cat || false;
-    t.dan = t.dan || false;
-    t.son = t.son || false;
-    t.lap = t.lap || false;
-    t.done = t.done || false;
-    t.delivered = t.delivered || false;
+    // safe default
+    t.cat = !!t.cat;
+    t.dan = !!t.dan;
+    t.son = !!t.son;
+    t.lap = !!t.lap;
+    t.done = !!t.done;
+    t.delivered = !!t.delivered;
 
     // đơn đã giao
     if (t.delivered) {
       doneHtml += `
         <tr>
-          <td>${t.name}</td>
+          <td>${t.name || ""}</td>
           <td class="note">${t.note || ""}</td>
           <td>${t.received || ""}</td>
           <td>${t.delivery || ""}</td>
@@ -161,28 +175,17 @@ function render() {
 
     html += `
     <tr class="${t.done ? 'done' : ''}">
-      <td>${t.name}</td>
+      <td>${t.name || ""}</td>
 
       <td class="note">${t.note || ""}</td>
 
       <td>${t.received || ""}</td>
       <td>${t.delivery || ""}</td>
 
-      <td onclick="toggle(${i},'cat')">
-        <div class="check ${t.cat?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'dan')">
-        <div class="check ${t.dan?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'son')">
-        <div class="check ${t.son?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'lap')">
-        <div class="check ${t.lap?'done':''}"></div>
-      </td>
+      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}"></div></td>
+      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}"></div></td>
+      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}"></div></td>
+      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}"></div></td>
 
       <td>
         <div class="check ${t.done?'done':''}"></div>
