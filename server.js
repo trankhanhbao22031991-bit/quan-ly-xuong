@@ -9,54 +9,36 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
-/* ================= AUTO CONVERT ================= */
-
-function convertData(oldData) {
-  return oldData.map(t => {
-
-    return {
-      // giữ name cũ hoặc fallback
-      name: t.name || t.product || "Không tên",
-
-      // chuyển worker → bỏ luôn
-      received: t.received || "",
-      delivery: t.delivery || "",
-
-      // giữ các bước
-      cat: !!t.cat,
-      dan: !!t.dan,
-      son: !!t.son,
-      lap: !!t.lap,
-
-      // auto tính done lại
-      done: (t.cat && t.dan && t.son && t.lap) || false,
-
-      // thêm field mới
-      delivered: !!t.delivered
-    };
-  });
-}
-
-/* ================= LOAD / SAVE ================= */
+/* ================= LOAD ================= */
 
 function load() {
   if (!fs.existsSync(FILE)) return [];
 
   try {
-    const raw = JSON.parse(fs.readFileSync(FILE));
+    const data = JSON.parse(fs.readFileSync(FILE));
 
-    const converted = convertData(raw);
+    // chuẩn hoá dữ liệu
+    return data.map(t => ({
+      name: (t.name || "").trim(),
+      received: t.received || "",
+      delivery: t.delivery || "",
 
-    // 🔥 ghi lại file sau khi convert
-    fs.writeFileSync(FILE, JSON.stringify(converted, null, 2));
+      cat: !!t.cat,
+      dan: !!t.dan,
+      son: !!t.son,
+      lap: !!t.lap,
 
-    return converted;
+      done: !!t.done,
+      delivered: !!t.delivered
+    }));
 
   } catch (e) {
     console.log("Lỗi đọc file:", e);
     return [];
   }
 }
+
+/* ================= SAVE ================= */
 
 function save(data) {
   fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
@@ -74,11 +56,14 @@ io.on("connection", (socket) => {
 
   socket.emit("data", tasks);
 
-  // THÊM
+  // THÊM ĐƠN
   socket.on("add", (task) => {
 
+    // chặn rác
+    if (!task.name || !task.name.trim()) return;
+
     const newTask = {
-      name: task.name || "Không tên",
+      name: task.name.trim(),
       received: task.received || "",
       delivery: task.delivery || "",
 
@@ -101,18 +86,14 @@ io.on("connection", (socket) => {
 
     if (!tasks[index]) return;
 
-    if (tasks[index][field] === undefined) {
-      tasks[index][field] = false;
-    }
-
     tasks[index][field] = !tasks[index][field];
 
     const t = tasks[index];
 
-    // auto hoàn thành
+    // auto DONE
     t.done = t.cat && t.dan && t.son && t.lap;
 
-    // nếu đã giao thì auto done
+    // nếu đã giao → auto done
     if (t.delivered) {
       t.done = true;
     }
