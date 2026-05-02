@@ -2,145 +2,66 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Quản lý xưởng PRO</title>
+<title>Quản lý xưởng</title>
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 body {
-  margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: #f1f5f9;
-  display: flex;
+  font-family: Arial;
+  background:#f3f4f6;
+  padding:20px;
 }
 
-/* SIDEBAR */
-.sidebar {
-  width: 220px;
-  background: #0f172a;
-  color: white;
-  height: 100vh;
-  padding: 20px;
-}
-
-/* MAIN */
-.main {
-  flex: 1;
-  padding: 20px;
-}
-
-/* DASHBOARD */
-.dashboard {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.card {
-  flex: 1;
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  text-align: center;
-}
-
-/* FORM */
 .box {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 15px;
+  background:#fff;
+  padding:10px;
+  margin-bottom:10px;
+  border:1px solid #ddd;
 }
 
-input {
-  padding: 10px;
-  margin-right: 5px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-button {
-  padding: 10px 15px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 6px;
-}
-
-/* TABLE */
 table {
-  width: 100%;
-  background: white;
-  border-collapse: collapse;
+  width:100%;
+  background:#fff;
+  border-collapse:collapse;
+  margin-bottom:20px;
 }
 
 th {
-  background: #1e293b;
-  color: white;
-  padding: 10px;
+  background:#e5e7eb;
+  padding:10px;
 }
 
 td {
-  padding: 10px;
-  text-align: center;
-  border-top: 1px solid #eee;
+  padding:10px;
+  border-top:1px solid #eee;
+  text-align:center;
 }
 
 td.note {
-  text-align: left;
-  max-width: 300px;
-  word-break: break-word;
+  text-align:left;
+  max-width:250px;
+  word-break:break-word;
 }
 
-tr.done { background: #dcfce7; }
-tr.late { background: #fee2e2; }
+tr.done { background:#dcfce7; }
 
-/* CHECK */
 .check {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #94a3b8;
-  border-radius: 5px;
-  margin: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  width:16px;
+  height:16px;
+  border:1px solid #555;
+  margin:auto;
+  cursor:pointer;
 }
 
 .check.done {
-  background: #22c55e;
-  border-color: #22c55e;
-  color: white;
+  background:#22c55e;
 }
-
-/* BADGE */
-.badge {
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.badge.doing { background: #e0f2fe; }
-.badge.late { background: #fee2e2; }
-.badge.done { background: #dcfce7; }
-
 </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-  <h2>🏭 Xưởng</h2>
-</div>
-
-<div class="main">
-
-<h2>Dashboard</h2>
-
-<div class="dashboard">
-  <div class="card"><h3 id="doing">0</h3>Đang làm</div>
-  <div class="card"><h3 id="late">0</h3>Trễ</div>
-  <div class="card"><h3 id="done">0</h3>Đã giao</div>
-</div>
+<h3>Đơn đang làm</h3>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
@@ -153,15 +74,15 @@ tr.late { background: #fee2e2; }
 <table>
 <thead>
 <tr>
-<th style="width:180px;">Sản phẩm</th>
+<th>Sản phẩm</th>
 <th>Ghi chú</th>
-<th style="width:110px;">Nhận</th>
-<th style="width:110px;">Giao</th>
+<th>Nhận</th>
+<th>Giao</th>
 <th>Cắt CNC</th>
 <th>Dán chỉ</th>
 <th>Dán flim</th>
 <th>Làm nguội</th>
-<th>Trạng thái</th>
+<th>Xong</th>
 <th>Đã giao</th>
 </tr>
 </thead>
@@ -169,11 +90,18 @@ tr.late { background: #fee2e2; }
 </table>
 
 <h3>Đơn đã giao</h3>
+
 <table>
+<thead>
+<tr>
+<th>Sản phẩm</th>
+<th>Ghi chú</th>
+<th>Nhận</th>
+<th>Giao</th>
+</tr>
+</thead>
 <tbody id="doneTable"></tbody>
 </table>
-
-</div>
 
 <script>
 const socket = io();
@@ -185,6 +113,8 @@ socket.on("data", (data) => {
 });
 
 function add() {
+  if (!name.value) return;
+
   socket.emit("add", {
     name: name.value,
     note: note.value,
@@ -206,71 +136,67 @@ function render() {
   let html = "";
   let doneHtml = "";
 
-  let today = new Date().toISOString().split("T")[0];
+  tasks.forEach((t, i) => {
 
-  let doing=0, late=0, done=0;
+    // default tránh lỗi dữ liệu cũ
+    t.cat = t.cat || false;
+    t.dan = t.dan || false;
+    t.son = t.son || false;
+    t.lap = t.lap || false;
+    t.done = t.done || false;
+    t.delivered = t.delivered || false;
 
-  tasks.forEach((t,i)=>{
-
-    if(t.delivered){
-      done++;
-      doneHtml += `<tr>
-        <td>${t.name}</td>
-        <td>${t.note||""}</td>
-        <td>${t.received||""}</td>
-        <td>${t.delivery||""}</td>
-      </tr>`;
+    // đơn đã giao
+    if (t.delivered) {
+      doneHtml += `
+        <tr>
+          <td>${t.name}</td>
+          <td class="note">${t.note || ""}</td>
+          <td>${t.received || ""}</td>
+          <td>${t.delivery || ""}</td>
+        </tr>
+      `;
       return;
     }
 
-    let isLate = t.delivery && t.delivery === today && !t.delivered;
-
-    if(isLate) late++;
-    else doing++;
-
-    let status = isLate
-      ? '<span class="badge late">Trễ</span>'
-      : t.done
-      ? '<span class="badge done">Xong</span>'
-      : '<span class="badge doing">Đang làm</span>';
-
     html += `
-    <tr class="${t.done?'done':''} ${isLate?'late':''}">
+    <tr class="${t.done ? 'done' : ''}">
       <td>${t.name}</td>
-      <td class="note">${t.note||""}</td>
-      <td>${t.received||""}</td>
-      <td>${t.delivery||""}</td>
 
-      ${check(i,'cat',t.cat)}
-      ${check(i,'dan',t.dan)}
-      ${check(i,'son',t.son)}
-      ${check(i,'lap',t.lap)}
+      <td class="note">${t.note || ""}</td>
 
-      <td>${status}</td>
+      <td>${t.received || ""}</td>
+      <td>${t.delivery || ""}</td>
+
+      <td onclick="toggle(${i},'cat')">
+        <div class="check ${t.cat?'done':''}"></div>
+      </td>
+
+      <td onclick="toggle(${i},'dan')">
+        <div class="check ${t.dan?'done':''}"></div>
+      </td>
+
+      <td onclick="toggle(${i},'son')">
+        <div class="check ${t.son?'done':''}"></div>
+      </td>
+
+      <td onclick="toggle(${i},'lap')">
+        <div class="check ${t.lap?'done':''}"></div>
+      </td>
+
+      <td>
+        <div class="check ${t.done?'done':''}"></div>
+      </td>
 
       <td onclick="toggle(${i},'delivered')">
-        <div class="check ${t.delivered?'done':''}">
-          ${t.delivered?'✓':''}
-        </div>
+        <div class="check ${t.delivered?'done':''}"></div>
       </td>
-    </tr>`;
+    </tr>
+    `;
   });
 
   document.getElementById("table").innerHTML = html;
   document.getElementById("doneTable").innerHTML = doneHtml;
-
-  document.getElementById("doing").innerText = doing;
-  document.getElementById("late").innerText = late;
-  document.getElementById("done").innerText = done;
-}
-
-function check(i,field,val){
-  return `
-  <td onclick="toggle(${i},'${field}')">
-    <div class="check ${val?'done':''}">
-      ${val?'✓':''}
-    </div>
-  </td>`;
 }
 </script>
 
