@@ -2,66 +2,170 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Quản lý xưởng</title>
+<title>Quản lý xưởng ERP</title>
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 body {
-  font-family: Arial;
-  background:#f3f4f6;
-  padding:20px;
+  margin: 0;
+  font-family: "Segoe UI", Arial;
+  background: #f4f6fa;
+  display: flex;
 }
 
+/* SIDEBAR */
+.sidebar {
+  width: 230px;
+  background: #0f172a;
+  color: white;
+  height: 100vh;
+  padding: 20px;
+  position: fixed;
+}
+
+.sidebar h2 {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu div {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+}
+
+.menu div:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* MAIN */
+.main {
+  margin-left: 250px;
+  padding: 20px;
+  width: 100%;
+}
+
+/* BOX */
 .box {
-  background:#fff;
-  padding:10px;
-  margin-bottom:10px;
-  border:1px solid #ddd;
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
+input {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #2563eb;
+}
+
+button {
+  padding: 10px 14px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* TABLE */
 table {
-  width:100%;
-  background:#fff;
-  border-collapse:collapse;
-  margin-bottom:20px;
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 th {
-  background:#e5e7eb;
-  padding:10px;
+  background: #111827;
+  color: white;
+  padding: 12px;
+  font-size: 12px;
 }
 
 td {
-  padding:10px;
-  border-top:1px solid #eee;
-  text-align:center;
+  padding: 12px;
+  border-top: 1px solid #eee;
+  text-align: center;
+  font-size: 13px;
 }
 
 td.note {
-  text-align:left;
-  max-width:250px;
-  word-break:break-word;
+  text-align: left;
+  max-width: 260px;
+  word-break: break-word;
+  color: #374151;
 }
 
-tr.done { background:#dcfce7; }
+/* ROW STATE */
+tr.done { background: #dcfce7; }
+tr.late { background: #fee2e2; }
 
+/* CHECK */
 .check {
-  width:16px;
-  height:16px;
-  border:1px solid #555;
-  margin:auto;
-  cursor:pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid #9ca3af;
+  margin: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  transition: 0.15s;
 }
 
 .check.done {
-  background:#22c55e;
+  background: #22c55e;
+  border-color: #22c55e;
+  transform: scale(1.05);
+}
+
+/* TITLE */
+h3 {
+  margin: 10px 0;
+  color: #111827;
 }
 </style>
 </head>
 
 <body>
 
-<h3>Đơn đang làm</h3>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏭 XƯỞNG ERP</h2>
+  <div class="menu">
+    <div>📦 Đơn hàng</div>
+    <div>🚚 Đã giao</div>
+    <div>⏰ Trễ hạn</div>
+    <div>📊 Báo cáo</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h3>📦 Đơn đang làm</h3>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
@@ -89,7 +193,7 @@ tr.done { background:#dcfce7; }
 <tbody id="table"></tbody>
 </table>
 
-<h3>Đơn đã giao</h3>
+<h3>🚚 Đơn đã giao</h3>
 
 <table>
 <thead>
@@ -103,56 +207,53 @@ tr.done { background:#dcfce7; }
 <tbody id="doneTable"></tbody>
 </table>
 
+</div>
+
 <script>
 const socket = io();
 let tasks = [];
 
-/* ===================== DATA ===================== */
 socket.on("data", (data) => {
   tasks = data || [];
   render();
 });
 
-/* ===================== ADD SAFE ===================== */
+/* ADD */
 function add() {
-  const nameEl = document.getElementById("name");
-  const noteEl = document.getElementById("note");
-  const receivedEl = document.getElementById("received");
-  const deliveryEl = document.getElementById("delivery");
+  const name = document.getElementById("name");
+  const note = document.getElementById("note");
+  const received = document.getElementById("received");
+  const delivery = document.getElementById("delivery");
 
-  const name = nameEl.value.trim();
-  const note = noteEl.value.trim();
-  const received = receivedEl.value;
-  const delivery = deliveryEl.value;
-
-  if (!name) return alert("Nhập tên sản phẩm");
+  if (!name.value.trim()) return;
 
   socket.emit("add", {
-    name,
-    note,
-    received,
-    delivery
+    name: name.value,
+    note: note.value,
+    received: received.value,
+    delivery: delivery.value
   });
 
-  nameEl.value = "";
-  noteEl.value = "";
-  receivedEl.value = "";
-  deliveryEl.value = "";
+  name.value = "";
+  note.value = "";
+  received.value = "";
+  delivery.value = "";
 }
 
-/* ===================== TOGGLE ===================== */
+/* TOGGLE */
 function toggle(i, field) {
   socket.emit("toggle", { index: i, field });
 }
 
-/* ===================== RENDER ===================== */
+/* RENDER */
 function render() {
   let html = "";
   let doneHtml = "";
 
+  const today = new Date().toISOString().split("T")[0];
+
   tasks.forEach((t, i) => {
 
-    // safe default
     t.cat = !!t.cat;
     t.dan = !!t.dan;
     t.son = !!t.son;
@@ -160,7 +261,8 @@ function render() {
     t.done = !!t.done;
     t.delivered = !!t.delivered;
 
-    // đơn đã giao
+    let isLate = t.delivery && t.delivery === today && !t.delivered;
+
     if (t.delivered) {
       doneHtml += `
         <tr>
@@ -174,25 +276,21 @@ function render() {
     }
 
     html += `
-    <tr class="${t.done ? 'done' : ''}">
+    <tr class="${t.done ? 'done' : ''} ${isLate ? 'late' : ''}">
       <td>${t.name || ""}</td>
-
       <td class="note">${t.note || ""}</td>
-
       <td>${t.received || ""}</td>
       <td>${t.delivery || ""}</td>
 
-      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}"></div></td>
-      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}"></div></td>
-      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}"></div></td>
-      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}"></div></td>
+      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}">${t.cat?'✓':''}</div></td>
+      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}">${t.dan?'✓':''}</div></td>
+      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}">${t.son?'✓':''}</div></td>
+      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}">${t.lap?'✓':''}</div></td>
 
-      <td>
-        <div class="check ${t.done?'done':''}"></div>
-      </td>
+      <td><div class="check ${t.done?'done':''}">${t.done?'✓':''}</div></td>
 
       <td onclick="toggle(${i},'delivered')">
-        <div class="check ${t.delivered?'done':''}"></div>
+        <div class="check ${t.delivered?'done':''}">${t.delivered?'✓':''}</div>
       </td>
     </tr>
     `;
