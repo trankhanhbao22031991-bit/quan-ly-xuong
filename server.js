@@ -9,73 +9,94 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
-// load dữ liệu
+/* ================= LOAD / SAVE ================= */
+
 function load() {
   if (!fs.existsSync(FILE)) return [];
-  return JSON.parse(fs.readFileSync(FILE));
+
+  try {
+    let data = JSON.parse(fs.readFileSync(FILE));
+
+    // chuẩn hoá data cũ
+    data = data.map(t => ({
+      name: t.name || "",
+      received: t.received || "",
+      delivery: t.delivery || "",
+      cat: t.cat || false,
+      dan: t.dan || false,
+      son: t.son || false,
+      lap: t.lap || false,
+      done: t.done || false
+    }));
+
+    return data;
+
+  } catch (e) {
+    console.log("Lỗi đọc file:", e);
+    return [];
+  }
 }
 
-// lưu dữ liệu
 function save(data) {
   fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
 let tasks = load();
 
-// serve giao diện
+/* ================= STATIC ================= */
+
 app.use(express.static("public"));
 
-io.on("connection", (socket) => {
-  console.log("User connected");
+/* ================= SOCKET ================= */
 
+io.on("connection", (socket) => {
   socket.emit("data", tasks);
 
-  // thêm task
+  // ADD TASK
   socket.on("add", (task) => {
-    tasks.push({
-      name: task.name,
-      worker: task.worker,
+
+    const newTask = {
+      name: task.name || "",
+      received: task.received || "",
+      delivery: task.delivery || "",
       cat: false,
       dan: false,
       son: false,
       lap: false,
       done: false
-    });
+    };
 
+    tasks.push(newTask);
     save(tasks);
     io.emit("data", tasks);
   });
 
-  // toggle công đoạn
+  // TOGGLE STEP
   socket.on("toggle", ({ index, field }) => {
+
     if (!tasks[index]) return;
+
+    if (tasks[index][field] === undefined) {
+      tasks[index][field] = false;
+    }
 
     tasks[index][field] = !tasks[index][field];
 
-    // auto hoàn thành
-    if (
-      tasks[index].cat &&
-      tasks[index].dan &&
-      tasks[index].son &&
-      tasks[index].lap
-    ) {
-      tasks[index].done = true;
-    } else {
-      tasks[index].done = false;
-    }
+    // auto DONE
+    const t = tasks[index];
+    t.done = t.cat && t.dan && t.son && t.lap;
 
     save(tasks);
     io.emit("data", tasks);
   });
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
 });
 
-// 🔥 QUAN TRỌNG CHO RENDER
+/* ================= SERVER ================= */
+
+// Render dùng PORT env
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server chạy tại port:", PORT);
 });
