@@ -5,42 +5,49 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
 const FILE = "tasks.json";
 
-/* LOAD */
+// LOAD SAFE
 function load() {
-  if (!fs.existsSync(FILE)) return [];
   try {
-    return JSON.parse(fs.readFileSync(FILE));
-  } catch {
+    if (!fs.existsSync(FILE)) return [];
+    const data = fs.readFileSync(FILE, "utf8");
+    return JSON.parse(data || "[]");
+  } catch (e) {
     return [];
   }
 }
 
-/* SAVE */
+// SAVE SAFE
 function save(data) {
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.log("SAVE ERROR:", e);
+  }
 }
 
 let tasks = load();
 
-/* STATIC */
 app.use(express.static("public"));
 
-/* SOCKET */
 io.on("connection", (socket) => {
+  console.log("Client connected");
 
   socket.emit("data", tasks);
 
-  // thêm đơn
+  // ADD
   socket.on("add", (task) => {
+    if (!task || !task.name) return;
 
-    if (!task.name || !task.name.trim()) return;
-
-    const newTask = {
-      name: task.name.trim(),
+    tasks.push({
+      name: task.name,
+      note: task.note || "",
       received: task.received || "",
       delivery: task.delivery || "",
 
@@ -48,39 +55,33 @@ io.on("connection", (socket) => {
       dan: false,
       son: false,
       lap: false,
-
       done: false,
       delivered: false
-    };
+    });
 
-    tasks.push(newTask);
     save(tasks);
     io.emit("data", tasks);
   });
 
-  // toggle
+  // TOGGLE
   socket.on("toggle", ({ index, field }) => {
-
     if (!tasks[index]) return;
 
     tasks[index][field] = !tasks[index][field];
 
-    const t = tasks[index];
-
-    // auto xong
-    t.done = t.cat && t.dan && t.son && t.lap;
-
-    // nếu đã giao thì coi như xong
-    if (t.delivered) t.done = true;
+    tasks[index].done =
+      tasks[index].cat &&
+      tasks[index].dan &&
+      tasks[index].son &&
+      tasks[index].lap;
 
     save(tasks);
     io.emit("data", tasks);
   });
-
 });
 
-/* RUN */
 const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-  console.log("Server chạy:", PORT);
+  console.log("Server running on", PORT);
 });
