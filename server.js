@@ -5,20 +5,14 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const FILE = "tasks.json";
 
-/* LOAD / SAVE */
 function load() {
   try {
-    if (!fs.existsSync(FILE)) return [];
-    return JSON.parse(fs.readFileSync(FILE));
-  } catch {
-    return [];
-  }
+    return JSON.parse(fs.readFileSync(FILE, "utf8"));
+  } catch (e) { return []; }
 }
 
 function save(data) {
@@ -30,53 +24,38 @@ let tasks = load();
 app.use(express.static("public"));
 
 io.on("connection", (socket) => {
-
-  // gửi data khi vào
   socket.emit("data", tasks);
 
-  // thêm đơn
   socket.on("add", (task) => {
-    if (!task?.name) return;
+    if (!task.name) return;
 
-    tasks.push({
+    const newTask = {
+      id: Date.now().toString(), // Tạo ID duy nhất
       name: task.name,
       note: task.note || "",
       received: task.received || "",
       delivery: task.delivery || "",
+      cat: false, dan: false, son: false, lap: false,
+      done: false, delivered: false
+    };
 
-      cat: false,
-      dan: false,
-      son: false,
-      lap: false,
-      done: false,
-      delivered: false
-    });
-
+    tasks.push(newTask);
     save(tasks);
     io.emit("data", tasks);
   });
 
-  // tick công đoạn + đã giao
-  socket.on("toggle", ({ index, field }) => {
-
-    const t = tasks[index];
+  socket.on("toggle", ({ id, field }) => {
+    const t = tasks.find(item => item.id === id);
     if (!t) return;
 
     t[field] = !t[field];
-
-    // tự check done
-    t.done =
-      t.cat &&
-      t.dan &&
-      t.son &&
-      t.lap;
+    
+    // Tự động cập nhật trạng thái "Xong"
+    t.done = t.cat && t.dan && t.son && t.lap;
 
     save(tasks);
     io.emit("data", tasks);
   });
-
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
-});
+server.listen(3000, () => console.log("Server đang chạy tại port 3000"));
