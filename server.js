@@ -20,7 +20,7 @@ const users = [
   { username: "tho2", password: "123456", role: "worker" }
 ];
 
-/* ================= DATA ================= */
+/* ================= LOAD / SAVE ================= */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
@@ -41,12 +41,9 @@ app.use(express.static("public"));
 /* ================= SOCKET ================= */
 io.on("connection", (socket) => {
 
-  socket.user = null;
   socket.role = null;
 
-  console.log("client connected");
-
-  /* ===== LOGIN ===== */
+  /* LOGIN */
   socket.on("login", ({ username, password }) => {
 
     const user = users.find(
@@ -58,56 +55,46 @@ io.on("connection", (socket) => {
       return;
     }
 
-    socket.user = user.username;
     socket.role = user.role;
 
-    socket.emit("login_success", {
-      username: user.username,
-      role: user.role
-    });
-
+    socket.emit("login_success", user);
     socket.emit("data", tasks);
   });
 
-  /* ===== REQUEST DATA ===== */
+  /* REQUEST DATA */
   socket.on("request_data", () => {
     socket.emit("data", tasks);
   });
 
-  /* ===== ADD TASK ===== */
- socket.on("add", (task) => {
+  /* ADD TASK */
+  socket.on("add", (task) => {
 
-  if (!socket.role) {
-    socket.emit("error_msg", "Chưa login");
-    return;
-  }
+    if (socket.role !== "admin") {
+      socket.emit("error_msg", "No permission");
+      return;
+    }
 
-  if (socket.role !== "admin") {
-    socket.emit("error_msg", "Không có quyền");
-    return;
-  }
+    if (!task?.name) return;
 
-  if (!task?.name) return;
+    tasks.push({
+      name: task.name,
+      note: task.note || "",
+      received: task.received || "",
+      delivery: task.delivery || "",
 
-  tasks.push({
-    name: task.name,
-    note: task.note || "",
-    received: task.received || "",
-    delivery: task.delivery || "",
+      cat: false,
+      dan: false,
+      son: false,
+      lap: false,
+      done: false,
+      delivered: false
+    });
 
-    cat: false,
-    dan: false,
-    son: false,
-    lap: false,
-    done: false,
-    delivered: false,
+    save(tasks);
+    io.emit("data", tasks);
   });
 
-  save(tasks);
-  io.emit("data", tasks);
-});
-
-  /* ===== TOGGLE ===== */
+  /* TOGGLE */
   socket.on("toggle", ({ index, field }) => {
 
     const t = tasks[index];
