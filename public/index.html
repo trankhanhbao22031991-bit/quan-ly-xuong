@@ -7,91 +7,107 @@
 
 <style>
 body {
-  font-family: Arial;
-  background: #f4f6f9;
-  padding: 15px;
+  font-family: "Segoe UI", Arial;
+  background: #f3f4f6;
+  padding: 20px;
+  color: #111;
 }
 
 h2 {
-  text-align: center;
+  margin-bottom: 15px;
 }
 
+/* FORM */
 .box {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 12px;
+  border: 1px solid #ddd;
   margin-bottom: 15px;
 }
 
 input {
-  padding: 10px;
-  margin: 5px;
-  width: 40%;
+  padding: 8px;
+  margin-right: 5px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  font-size: 14px;
 }
 
 button {
-  padding: 10px 15px;
-  background: #007bff;
+  padding: 8px 12px;
+  background: #2563eb;
   color: white;
   border: none;
-  border-radius: 6px;
   cursor: pointer;
 }
 
-button:hover {
-  background: #0056b3;
-}
-
+/* TABLE */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
+  background: #fff;
+  font-size: 14px;
 }
 
 th {
-  background: #007bff;
-  color: white;
+  background: #e5e7eb;
   padding: 10px;
+  border: 1px solid #ddd;
+  font-weight: 600;
 }
 
 td {
   padding: 10px;
+  border: 1px solid #eee;
   text-align: center;
-  border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+  background: #f9fafb;
 }
 
 tr.done {
-  background: #d4edda;
+  background: #ecfdf5;
 }
 
-.tick {
-  font-size: 20px;
+/* CHECKBOX CHUẨN */
+.check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #555;
+  margin: auto;
   cursor: pointer;
-  font-weight: bold;
+  position: relative;
 }
 
-.green { color: green; }
-.red { color: red; }
+.check.done {
+  background: #2563eb;
+  border-color: #2563eb;
+}
 
+.check.done::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 </style>
 </head>
 
 <body>
 
-<h2>📦 Quản lý công việc xưởng</h2>
+<h2>Quản lý công việc xưởng</h2>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
   <input id="worker" placeholder="Người làm">
-  <button onclick="add()">➕ Thêm</button>
+  <button onclick="add()">Thêm</button>
 </div>
 
-<div class="box">
 <table>
   <thead>
     <tr>
@@ -101,12 +117,11 @@ tr.done {
       <th>Dán</th>
       <th>Sơn</th>
       <th>Làm nguội</th>
-      <th>Xong</th>
+      <th>Hoàn thành</th>
     </tr>
   </thead>
   <tbody id="table"></tbody>
 </table>
-</div>
 
 <script>
 const socket = io();
@@ -157,23 +172,25 @@ function render() {
         <td>${t.name}</td>
         <td>${t.worker}</td>
 
-        <td class="tick ${t.cat?'green':'red'}" onclick="toggle(${i},'cat')">
-          ${t.cat ? '✔' : '✘'}
+        <td onclick="toggle(${i},'cat')">
+          <div class="check ${t.cat ? 'done' : ''}"></div>
         </td>
 
-        <td class="tick ${t.dan?'green':'red'}" onclick="toggle(${i},'dan')">
-          ${t.dan ? '✔' : '✘'}
+        <td onclick="toggle(${i},'dan')">
+          <div class="check ${t.dan ? 'done' : ''}"></div>
         </td>
 
-        <td class="tick ${t.son?'green':'red'}" onclick="toggle(${i},'son')">
-          ${t.son ? '✔' : '✘'}
+        <td onclick="toggle(${i},'son')">
+          <div class="check ${t.son ? 'done' : ''}"></div>
         </td>
 
-        <td class="tick ${t.lap?'green':'red'}" onclick="toggle(${i},'lap')">
-          ${t.lap ? '✔' : '✘'}
+        <td onclick="toggle(${i},'lap')">
+          <div class="check ${t.lap ? 'done' : ''}"></div>
         </td>
 
-        <td class="tick">${t.done ? '✔' : ''}</td>
+        <td>
+          <div class="check ${t.done ? 'done' : ''}"></div>
+        </td>
       </tr>
     `;
   });
