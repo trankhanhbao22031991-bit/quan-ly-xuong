@@ -16,7 +16,7 @@ const users = [
   { username: "tho2", password: "123456", role: "worker" }
 ];
 
-/* ================= LOAD / SAVE ================= */
+/* ================= DATA ================= */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
@@ -40,7 +40,7 @@ io.on("connection", (socket) => {
   socket.user = null;
   socket.role = null;
 
-  console.log("USER CONNECTED");
+  console.log("client connected");
 
   /* ================= LOGIN ================= */
   socket.on("login", ({ username, password }) => {
@@ -62,18 +62,23 @@ io.on("connection", (socket) => {
       role: user.role
     });
 
-    // gửi data ngay khi login
     socket.emit("data", tasks);
   });
 
-  /* ================= REQUEST DATA (FIX CHẬM) ================= */
+  /* ================= REQUEST DATA ================= */
   socket.on("request_data", () => {
     socket.emit("data", tasks);
   });
 
   /* ================= ADD ================= */
   socket.on("add", (task) => {
-    if (socket.role !== "admin") return;
+
+    if (socket.role !== "admin") {
+      socket.emit("error_msg", "No permission");
+      return;
+    }
+
+    if (!task?.name) return;
 
     tasks.push({
       name: task.name,
@@ -101,12 +106,10 @@ io.on("connection", (socket) => {
     const t = tasks[index];
     if (!t) return;
 
-    // worker không được tick delivered
     if (field === "delivered" && socket.role !== "admin") return;
 
     t[field] = !t[field];
 
-    // auto done
     t.done =
       t.cat &&
       t.dan &&
