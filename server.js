@@ -9,9 +9,44 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
+/* ================= LOAD / SAVE ================= */
+
 function load() {
   if (!fs.existsSync(FILE)) return [];
-  return JSON.parse(fs.readFileSync(FILE));
+
+  try {
+    let data = JSON.parse(fs.readFileSync(FILE));
+
+    // 🔥 FIX DATA CŨ TẠI ĐÂY
+    data = data.map(t => {
+
+      // nếu thiếu name thì giữ lại hoặc gán mặc định
+      const name = t.name || t.product || "Không tên";
+
+      return {
+        name,
+        received: t.received || "",
+        delivery: t.delivery || "",
+
+        cat: !!t.cat,
+        dan: !!t.dan,
+        son: !!t.son,
+        lap: !!t.lap,
+
+        done: !!t.done,
+        delivered: !!t.delivered
+      };
+    });
+
+    // ghi lại file sau khi fix
+    save(data);
+
+    return data;
+
+  } catch (e) {
+    console.log("Lỗi đọc file:", e);
+    return [];
+  }
 }
 
 function save(data) {
@@ -20,32 +55,46 @@ function save(data) {
 
 let tasks = load();
 
+/* ================= STATIC ================= */
+
 app.use(express.static("public"));
+
+/* ================= SOCKET ================= */
 
 io.on("connection", (socket) => {
 
   socket.emit("data", tasks);
 
+  // THÊM
   socket.on("add", (task) => {
-    tasks.push({
-      name: task.name || "",
+
+    const newTask = {
+      name: task.name || "Không tên",
       received: task.received || "",
       delivery: task.delivery || "",
+
       cat: false,
       dan: false,
       son: false,
       lap: false,
-      done: false,
-      delivered: false   // 👈 mới
-    });
 
+      done: false,
+      delivered: false
+    };
+
+    tasks.push(newTask);
     save(tasks);
     io.emit("data", tasks);
   });
 
+  // TOGGLE
   socket.on("toggle", ({ index, field }) => {
 
     if (!tasks[index]) return;
+
+    if (tasks[index][field] === undefined) {
+      tasks[index][field] = false;
+    }
 
     tasks[index][field] = !tasks[index][field];
 
@@ -54,8 +103,8 @@ io.on("connection", (socket) => {
     // auto hoàn thành
     t.done = t.cat && t.dan && t.son && t.lap;
 
-    // nếu tick "đã giao"
-    if (field === "delivered" && t.delivered) {
+    // nếu đã giao → auto done
+    if (t.delivered) {
       t.done = true;
     }
 
@@ -65,5 +114,10 @@ io.on("connection", (socket) => {
 
 });
 
+/* ================= SERVER ================= */
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server chạy:", PORT));
+
+server.listen(PORT, () => {
+  console.log("Server chạy tại port:", PORT);
+});
