@@ -190,19 +190,29 @@ let tasks = [];
 
 /* ================= LOGIN ================= */
 function login() {
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+
   socket.emit("login", {
-    username: document.getElementById("username").value,
-    password: document.getElementById("password").value
+    username: u,
+    password: p
   });
 }
 
+/* login success */
 socket.on("login_success", (data) => {
   role = data.role;
 
+  console.log("LOGIN OK:", data);
+
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("main").style.display = "block";
+
+  // load data ngay lập tức
+  socket.emit("request_data");
 });
 
+/* login fail */
 socket.on("login_fail", () => {
   alert("Sai tài khoản hoặc mật khẩu");
 });
@@ -238,6 +248,16 @@ function toggle(i, field) {
   socket.emit("toggle", { index: i, field });
 }
 
+/* FIX riêng cho "đã giao" */
+function toggleDelivered(i) {
+  if (role !== "admin") {
+    alert("Chỉ admin được tick đã giao");
+    return;
+  }
+
+  socket.emit("toggle", { index: i, field: "delivered" });
+}
+
 /* ================= RENDER ================= */
 function render() {
   let html = "";
@@ -271,7 +291,7 @@ function render() {
 
       <td>${t.done ? "✔" : ""}</td>
 
-      <td onclick="role==='admin' && toggle(${i},'delivered')">
+      <td onclick="toggleDelivered(${i})">
         <div class="check ${t.delivered?'done':''}">✓</div>
       </td>
     </tr>
