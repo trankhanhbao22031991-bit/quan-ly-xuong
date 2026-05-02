@@ -5,45 +5,67 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const FILE = "tasks.json";
 
-// LOAD SAFE
+/* ================= USERS DATABASE ================= */
+const users = [
+  { username: "admin", password: "123456", role: "admin" },
+  { username: "tho1", password: "123456", role: "worker" },
+  { username: "tho2", password: "123456", role: "worker" }
+];
+
+/* ================= LOAD DATA ================= */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
-    const data = fs.readFileSync(FILE, "utf8");
-    return JSON.parse(data || "[]");
-  } catch (e) {
+    return JSON.parse(fs.readFileSync(FILE));
+  } catch {
     return [];
   }
 }
 
-// SAVE SAFE
 function save(data) {
-  try {
-    fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
-  } catch (e) {
-    console.log("SAVE ERROR:", e);
-  }
+  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
 let tasks = load();
 
 app.use(express.static("public"));
 
+/* ================= SOCKET ================= */
 io.on("connection", (socket) => {
-  console.log("Client connected");
 
-  socket.emit("data", tasks);
+  socket.user = null;
+  socket.role = null;
 
-  // ADD
+  /* ===== LOGIN ===== */
+  socket.on("login", ({ username, password }) => {
+
+    const user = users.find(
+      u => u.username === username && u.password === password
+    );
+
+    if (!user) {
+      socket.emit("login_fail");
+      return;
+    }
+
+    socket.user = user.username;
+    socket.role = user.role;
+
+    socket.emit("login_success", {
+      username: user.username,
+      role: user.role
+    });
+
+    socket.emit("data", tasks);
+  });
+
+  /* ===== ADD (ADMIN ONLY) ===== */
   socket.on("add", (task) => {
-    if (!task || !task.name) return;
+    if (socket.role !== "admin") return;
 
     tasks.push({
       name: task.name,
@@ -56,16 +78,22 @@ io.on("connection", (socket) => {
       son: false,
       lap: false,
       done: false,
-      delivered: false
+      delivered: false,
+
+      createdBy: socket.user
     });
 
     save(tasks);
     io.emit("data", tasks);
   });
 
-  // TOGGLE
+  /* ===== TOGGLE ===== */
   socket.on("toggle", ({ index, field }) => {
+
     if (!tasks[index]) return;
+
+    // worker KHÔNG được set delivered
+    if (socket.role === "worker" && field === "delivered") return;
 
     tasks[index][field] = !tasks[index][field];
 
@@ -78,10 +106,9 @@ io.on("connection", (socket) => {
     save(tasks);
     io.emit("data", tasks);
   });
+
 });
 
-const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log("Server running on", PORT);
+server.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
 });
