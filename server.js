@@ -9,57 +9,34 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
-/* ================= LOAD ================= */
-
+/* LOAD */
 function load() {
   if (!fs.existsSync(FILE)) return [];
-
   try {
-    const data = JSON.parse(fs.readFileSync(FILE));
-
-    // chuẩn hoá dữ liệu
-    return data.map(t => ({
-      name: (t.name || "").trim(),
-      received: t.received || "",
-      delivery: t.delivery || "",
-
-      cat: !!t.cat,
-      dan: !!t.dan,
-      son: !!t.son,
-      lap: !!t.lap,
-
-      done: !!t.done,
-      delivered: !!t.delivered
-    }));
-
-  } catch (e) {
-    console.log("Lỗi đọc file:", e);
+    return JSON.parse(fs.readFileSync(FILE));
+  } catch {
     return [];
   }
 }
 
-/* ================= SAVE ================= */
-
+/* SAVE */
 function save(data) {
   fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
 let tasks = load();
 
-/* ================= STATIC ================= */
-
+/* STATIC */
 app.use(express.static("public"));
 
-/* ================= SOCKET ================= */
-
+/* SOCKET */
 io.on("connection", (socket) => {
 
   socket.emit("data", tasks);
 
-  // THÊM ĐƠN
+  // thêm đơn
   socket.on("add", (task) => {
 
-    // chặn rác
     if (!task.name || !task.name.trim()) return;
 
     const newTask = {
@@ -81,7 +58,7 @@ io.on("connection", (socket) => {
     io.emit("data", tasks);
   });
 
-  // TOGGLE
+  // toggle
   socket.on("toggle", ({ index, field }) => {
 
     if (!tasks[index]) return;
@@ -90,13 +67,11 @@ io.on("connection", (socket) => {
 
     const t = tasks[index];
 
-    // auto DONE
+    // auto xong
     t.done = t.cat && t.dan && t.son && t.lap;
 
-    // nếu đã giao → auto done
-    if (t.delivered) {
-      t.done = true;
-    }
+    // nếu đã giao thì coi như xong
+    if (t.delivered) t.done = true;
 
     save(tasks);
     io.emit("data", tasks);
@@ -104,10 +79,8 @@ io.on("connection", (socket) => {
 
 });
 
-/* ================= SERVER ================= */
-
+/* RUN */
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
-  console.log("Server chạy tại port:", PORT);
+  console.log("Server chạy:", PORT);
 });
