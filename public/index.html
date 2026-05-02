@@ -1,220 +1,79 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Quản lý xưởng</title>
-<script src="/socket.io/socket.io.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #f3f4f6;
-  padding: 20px;
-}
-
-h3 { margin-top: 20px; }
-
-.box {
-  background: white;
-  padding: 10px;
-  margin-bottom: 10px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-input, button {
-  padding: 10px;
-}
-
-button {
-  background: #2563eb;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-table {
-  width: 100%;
-  background: white;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-th {
-  background: #111827;
-  color: white;
-  padding: 10px;
-}
-
-td {
-  padding: 10px;
-  text-align: center;
-  border-top: 1px solid #eee;
-}
-
-td.note {
-  text-align: left;
-}
-
-.check {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #888;
-  border-radius: 4px;
-  margin: auto;
-  cursor: pointer;
-}
-
-.check.done {
-  background: #22c55e;
-}
-</style>
-</head>
-
-<body>
-
-<h3>📦 Quản lý xưởng</h3>
-
-<div class="box">
-  <input id="name" placeholder="Tên sản phẩm">
-  <input id="note" placeholder="Ghi chú">
-  <input id="received" type="date">
-  <input id="delivery" type="date">
-  <button onclick="add()">Thêm đơn</button>
-</div>
-
-<h3>Đơn đang làm</h3>
-
-<table>
-<thead>
-<tr>
-<th>Sản phẩm</th>
-<th>Ghi chú</th>
-<th>Nhận</th>
-<th>Giao</th>
-<th>Cắt</th>
-<th>Dán CHỈ</th>
-<th>DÁN FLIM</th>
-<th>Lắp</th>
-<th>Xong</th>
-<th>Đã giao</th>
-</tr>
-</thead>
-
-<tbody id="table"></tbody>
-</table>
-
-<h3>🚚 Đơn đã giao</h3>
-
-<table>
-<thead>
-<tr>
-<th>Sản phẩm</th>
-<th>Ghi chú</th>
-<th>Nhận</th>
-<th>Giao</th>
-</tr>
-</thead>
-
-<tbody id="doneTable"></tbody>
-</table>
-
 <script>
-const socket = io({
-  transports: ["websocket"],
-  reconnection: true
-});
-
-let tasks = [];
-
-/* CONNECT DEBUG */
-socket.on("connect", () => {
-  console.log("SOCKET CONNECTED");
-});
+const socket = io();
+let tasks=[];
 
 /* DATA */
-socket.on("data", (data) => {
-  tasks = data || [];
+socket.on("data",(data)=>{
+  tasks=data||[];
   render();
 });
 
 /* ADD */
-function add() {
-
-  const name = document.getElementById("name").value;
-  const note = document.getElementById("note").value;
-  const received = document.getElementById("received").value;
-  const delivery = document.getElementById("delivery").value;
-
-  if (!name) {
-    alert("Nhập tên sản phẩm");
-    return;
-  }
-
-  socket.emit("add", {
-    name,
-    note,
-    received,
-    delivery
+function add(){
+  socket.emit("add",{
+    name:name.value,
+    note:note.value,
+    received:received.value,
+    delivery:delivery.value
   });
 
-  document.getElementById("name").value = "";
-  document.getElementById("note").value = "";
-  document.getElementById("received").value = "";
-  document.getElementById("delivery").value = "";
+  name.value="";
+  note.value="";
+  received.value="";
+  delivery.value="";
 }
 
-/* TOGGLE */
-function toggle(i, field) {
-  socket.emit("toggle", { index: i, field });
+/* TOGGLE BY ID (QUAN TRỌNG) */
+function toggle(id,field){
+  socket.emit("toggle",{id,field});
+}
+
+/* LATE */
+function lateLevel(t){
+  if(!t.delivery || t.delivered) return 0;
+  const diff=Math.floor((new Date()-new Date(t.delivery))/86400000);
+  if(diff>=2) return 2;
+  if(diff>=0) return 1;
+  return 0;
 }
 
 /* RENDER */
-function render() {
+function render(){
 
-  let html = "";
-  let doneHtml = "";
+  let html="";
+  let late=0;
 
-  tasks.forEach((t, i) => {
+  const sorted=[...tasks].sort((a,b)=>lateLevel(b)-lateLevel(a));
 
-    if (t.delivered) {
-      doneHtml += `
-        <tr>
-          <td>${t.name}</td>
-          <td>${t.note || ""}</td>
-          <td>${t.received || ""}</td>
-          <td>${t.delivery || ""}</td>
-        </tr>
-      `;
-      return;
-    }
+  sorted.forEach(t=>{
 
-    html += `
-    <tr>
+    const lv=lateLevel(t);
+    if(lv>0) late++;
+
+    let cls="";
+    if(lv===1) cls="late1";
+    if(lv===2) cls="late2";
+
+    html+=`
+    <tr class="${cls}">
       <td>${t.name}</td>
-      <td class="note">${t.note || ""}</td>
-      <td>${t.received || ""}</td>
-      <td>${t.delivery || ""}</td>
+      <td>${t.note}</td>
+      <td>${t.received}</td>
+      <td>${t.delivery}</td>
 
-      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}"></div></td>
-      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}"></div></td>
-      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}"></div></td>
-      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}"></div></td>
+      <td onclick="toggle('${t.id}','cat')">✔</td>
+      <td onclick="toggle('${t.id}','dan')">✔</td>
+      <td onclick="toggle('${t.id}','son')">✔</td>
+      <td onclick="toggle('${t.id}','lap')">✔</td>
 
-      <td>${t.done ? "✔" : ""}</td>
+      <td>${t.done?"✓":""}</td>
 
-      <td onclick="toggle(${i},'delivered')">
-        <div class="check ${t.delivered?'done':''}"></div>
-      </td>
+      <td onclick="toggle('${t.id}','delivered')">🚚</td>
     </tr>
     `;
   });
 
-  document.getElementById("table").innerHTML = html;
-  document.getElementById("doneTable").innerHTML = doneHtml;
+  table.innerHTML=html;
+  lateEl().innerText=late;
 }
 </script>
-
-</body>
-</html>
