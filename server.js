@@ -9,39 +9,48 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
+/* ================= AUTO CONVERT ================= */
+
+function convertData(oldData) {
+  return oldData.map(t => {
+
+    return {
+      // giữ name cũ hoặc fallback
+      name: t.name || t.product || "Không tên",
+
+      // chuyển worker → bỏ luôn
+      received: t.received || "",
+      delivery: t.delivery || "",
+
+      // giữ các bước
+      cat: !!t.cat,
+      dan: !!t.dan,
+      son: !!t.son,
+      lap: !!t.lap,
+
+      // auto tính done lại
+      done: (t.cat && t.dan && t.son && t.lap) || false,
+
+      // thêm field mới
+      delivered: !!t.delivered
+    };
+  });
+}
+
 /* ================= LOAD / SAVE ================= */
 
 function load() {
   if (!fs.existsSync(FILE)) return [];
 
   try {
-    let data = JSON.parse(fs.readFileSync(FILE));
+    const raw = JSON.parse(fs.readFileSync(FILE));
 
-    // 🔥 FIX DATA CŨ TẠI ĐÂY
-    data = data.map(t => {
+    const converted = convertData(raw);
 
-      // nếu thiếu name thì giữ lại hoặc gán mặc định
-      const name = t.name || t.product || "Không tên";
+    // 🔥 ghi lại file sau khi convert
+    fs.writeFileSync(FILE, JSON.stringify(converted, null, 2));
 
-      return {
-        name,
-        received: t.received || "",
-        delivery: t.delivery || "",
-
-        cat: !!t.cat,
-        dan: !!t.dan,
-        son: !!t.son,
-        lap: !!t.lap,
-
-        done: !!t.done,
-        delivered: !!t.delivered
-      };
-    });
-
-    // ghi lại file sau khi fix
-    save(data);
-
-    return data;
+    return converted;
 
   } catch (e) {
     console.log("Lỗi đọc file:", e);
@@ -103,7 +112,7 @@ io.on("connection", (socket) => {
     // auto hoàn thành
     t.done = t.cat && t.dan && t.son && t.lap;
 
-    // nếu đã giao → auto done
+    // nếu đã giao thì auto done
     if (t.delivered) {
       t.done = true;
     }
