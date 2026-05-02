@@ -5,7 +5,11 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: { origin: "*" },
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 
 const FILE = "tasks.json";
 
@@ -42,7 +46,7 @@ io.on("connection", (socket) => {
 
   console.log("client connected");
 
-  /* ================= LOGIN ================= */
+  /* ===== LOGIN ===== */
   socket.on("login", ({ username, password }) => {
 
     const user = users.find(
@@ -65,12 +69,12 @@ io.on("connection", (socket) => {
     socket.emit("data", tasks);
   });
 
-  /* ================= REQUEST DATA ================= */
+  /* ===== REQUEST DATA ===== */
   socket.on("request_data", () => {
     socket.emit("data", tasks);
   });
 
-  /* ================= ADD ================= */
+  /* ===== ADD TASK ===== */
   socket.on("add", (task) => {
 
     if (socket.role !== "admin") {
@@ -100,7 +104,7 @@ io.on("connection", (socket) => {
     io.emit("data", tasks);
   });
 
-  /* ================= TOGGLE ================= */
+  /* ===== TOGGLE ===== */
   socket.on("toggle", ({ index, field }) => {
 
     const t = tasks[index];
