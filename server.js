@@ -9,32 +9,9 @@ const io = new Server(server);
 
 const FILE = "tasks.json";
 
-/* ================= LOAD / SAVE ================= */
-
 function load() {
   if (!fs.existsSync(FILE)) return [];
-
-  try {
-    let data = JSON.parse(fs.readFileSync(FILE));
-
-    // chuẩn hoá data cũ
-    data = data.map(t => ({
-      name: t.name || "",
-      received: t.received || "",
-      delivery: t.delivery || "",
-      cat: t.cat || false,
-      dan: t.dan || false,
-      son: t.son || false,
-      lap: t.lap || false,
-      done: t.done || false
-    }));
-
-    return data;
-
-  } catch (e) {
-    console.log("Lỗi đọc file:", e);
-    return [];
-  }
+  return JSON.parse(fs.readFileSync(FILE));
 }
 
 function save(data) {
@@ -43,19 +20,14 @@ function save(data) {
 
 let tasks = load();
 
-/* ================= STATIC ================= */
-
 app.use(express.static("public"));
 
-/* ================= SOCKET ================= */
-
 io.on("connection", (socket) => {
+
   socket.emit("data", tasks);
 
-  // ADD TASK
   socket.on("add", (task) => {
-
-    const newTask = {
+    tasks.push({
       name: task.name || "",
       received: task.received || "",
       delivery: task.delivery || "",
@@ -63,28 +35,29 @@ io.on("connection", (socket) => {
       dan: false,
       son: false,
       lap: false,
-      done: false
-    };
+      done: false,
+      delivered: false   // 👈 mới
+    });
 
-    tasks.push(newTask);
     save(tasks);
     io.emit("data", tasks);
   });
 
-  // TOGGLE STEP
   socket.on("toggle", ({ index, field }) => {
 
     if (!tasks[index]) return;
 
-    if (tasks[index][field] === undefined) {
-      tasks[index][field] = false;
-    }
-
     tasks[index][field] = !tasks[index][field];
 
-    // auto DONE
     const t = tasks[index];
+
+    // auto hoàn thành
     t.done = t.cat && t.dan && t.son && t.lap;
+
+    // nếu tick "đã giao"
+    if (field === "delivered" && t.delivered) {
+      t.done = true;
+    }
 
     save(tasks);
     io.emit("data", tasks);
@@ -92,11 +65,5 @@ io.on("connection", (socket) => {
 
 });
 
-/* ================= SERVER ================= */
-
-// Render dùng PORT env
 const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log("Server chạy tại port:", PORT);
-});
+server.listen(PORT, () => console.log("Server chạy:", PORT));
