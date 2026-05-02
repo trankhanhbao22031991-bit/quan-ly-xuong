@@ -5,70 +5,67 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: { origin: "*" },
+  transports: ["websocket"]
 });
 
 const FILE = "tasks.json";
 
-/* LOAD */
-function load(){
-  try{
-    if(!fs.existsSync(FILE)) return [];
-    return JSON.parse(fs.readFileSync(FILE,"utf-8") || "[]");
-  }catch{
+/* LOAD DATA */
+function load() {
+  try {
+    if (!fs.existsSync(FILE)) return [];
+    return JSON.parse(fs.readFileSync(FILE));
+  } catch {
     return [];
   }
 }
 
-/* SAVE */
-function save(data){
-  fs.writeFileSync(FILE, JSON.stringify(data,null,2));
+/* SAVE DATA */
+function save(data) {
+  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
 let tasks = load();
 
-/* ID GENERATOR */
-function uid(){
-  return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-}
-
 app.use(express.static("public"));
 
-io.on("connection",(socket)=>{
+/* SOCKET */
+io.on("connection", (socket) => {
+
+  console.log("client connected");
 
   socket.emit("data", tasks);
 
   /* ADD */
-  socket.on("add",(t)=>{
+  socket.on("add", (t) => {
 
-    if(!t?.name?.trim()) return;
+    if (!t?.name) return;
 
     tasks.push({
-      id: uid(),
-      name: t.name.trim(),
+      name: t.name,
       note: t.note || "",
       received: t.received || "",
       delivery: t.delivery || "",
 
-      cat:false,
-      dan:false,
-      son:false,
-      lap:false,
-      done:false,
-      delivered:false
+      cat: false,
+      dan: false,
+      son: false,
+      lap: false,
+      done: false,
+      delivered: false
     });
 
     save(tasks);
     io.emit("data", tasks);
   });
 
-  /* TOGGLE BY ID */
-  socket.on("toggle",({id,field})=>{
+  /* TOGGLE */
+  socket.on("toggle", ({ index, field }) => {
 
-    const task = tasks.find(x=>x.id === id);
-    if(!task) return;
+    const task = tasks[index];
+    if (!task) return;
 
     task[field] = !task[field];
 
@@ -84,6 +81,6 @@ io.on("connection",(socket)=>{
 
 });
 
-server.listen(process.env.PORT || 3000,()=>{
-  console.log("ERP ID SERVER RUNNING");
+server.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
 });
