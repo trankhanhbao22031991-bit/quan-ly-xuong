@@ -2,97 +2,91 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ERP Xưởng FIX</title>
+<title>Quản lý xưởng</title>
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
-body { margin:0; font-family:Arial; background:#f4f6fa; }
-
-/* LOGIN */
-#loginBox {
-  width:300px;
-  margin:120px auto;
-  background:#fff;
-  padding:20px;
-  border-radius:10px;
+body {
+  font-family: Arial;
+  background: #f3f4f6;
+  padding: 20px;
 }
-
-input, button {
-  width:100%;
-  padding:10px;
-  margin-top:5px;
-}
-
-/* MAIN */
-.main { display:none; padding:20px; }
 
 .box {
-  background:#fff;
-  padding:10px;
-  margin-bottom:10px;
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-/* TABLE */
+input {
+  padding: 10px;
+}
+
+button {
+  padding: 10px 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
 table {
-  width:100%;
-  background:#fff;
-  border-collapse:collapse;
+  width: 100%;
+  background: white;
+  border-collapse: collapse;
 }
 
 th {
-  background:#111827;
-  color:#fff;
-  padding:10px;
+  background: #111827;
+  color: white;
+  padding: 10px;
 }
 
 td {
-  padding:10px;
-  text-align:center;
-  border-top:1px solid #eee;
+  padding: 10px;
+  text-align: center;
+  border-top: 1px solid #eee;
+}
+
+td.note {
+  text-align: left;
 }
 
 .check {
-  width:18px;
-  height:18px;
-  border:2px solid #888;
-  border-radius:4px;
-  cursor:pointer;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #999;
+  margin: auto;
+  cursor: pointer;
 }
 
 .check.done {
-  background:#22c55e;
+  background: #22c55e;
 }
 </style>
 </head>
 
 <body>
 
-<div id="loginBox">
-  <h3>Login</h3>
-  <input id="username" placeholder="user">
-  <input id="password" type="password" placeholder="pass">
-  <button onclick="login()">Login</button>
-</div>
-
-<div class="main" id="main">
+<h3>📦 Quản lý xưởng</h3>
 
 <div class="box">
-  <input id="name" placeholder="Tên SP">
+  <input id="name" placeholder="Tên sản phẩm">
   <input id="note" placeholder="Ghi chú">
   <input id="received" type="date">
   <input id="delivery" type="date">
   <button onclick="add()">Thêm</button>
 </div>
 
-<h3>Đơn đang làm</h3>
 <table>
 <thead>
 <tr>
-<th>SP</th>
-<th>Note</th>
+<th>Sản phẩm</th>
+<th>Ghi chú</th>
 <th>Nhận</th>
 <th>Giao</th>
 <th>Cắt</th>
@@ -100,56 +94,24 @@ td {
 <th>Sơn</th>
 <th>Lắp</th>
 <th>Xong</th>
-<th>Giao</th>
+<th>Đã giao</th>
 </tr>
 </thead>
+
 <tbody id="table"></tbody>
 </table>
 
 <h3>Đơn đã giao</h3>
 <table>
-<thead>
-<tr>
-<th>SP</th>
-<th>Note</th>
-<th>Nhận</th>
-<th>Giao</th>
-</tr>
-</thead>
 <tbody id="doneTable"></tbody>
 </table>
 
-</div>
-
 <script>
-const socket = io({
-  transports: ["websocket"]
-});
+const socket = io();
 
-let role = null;
 let tasks = [];
 
-/* LOGIN */
-function login() {
-  socket.emit("login", {
-    username: username.value,
-    password: password.value
-  });
-}
-
-socket.on("login_success", (data) => {
-  role = data.role;
-
-  loginBox.style.display = "none";
-  main.style.display = "block";
-
-  socket.emit("request_data");
-});
-
-socket.on("login_fail", () => {
-  alert("Sai login");
-});
-
+/* DATA */
 socket.on("data", (data) => {
   tasks = data || [];
   render();
@@ -157,33 +119,33 @@ socket.on("data", (data) => {
 
 /* ADD */
 function add() {
-  if (role !== "admin") return alert("No permission");
-
   socket.emit("add", {
     name: name.value,
     note: note.value,
     received: received.value,
     delivery: delivery.value
   });
+
+  name.value = "";
+  note.value = "";
+  received.value = "";
+  delivery.value = "";
 }
 
 /* TOGGLE */
-function toggle(i, f) {
-  socket.emit("toggle", { index: i, field: f });
-}
-
-function toggleDelivered(i) {
-  if (role !== "admin") return;
-  socket.emit("toggle", { index: i, field: "delivered" });
+function toggle(i, field) {
+  socket.emit("toggle", { index: i, field });
 }
 
 /* RENDER */
 function render() {
+
   let html = "";
   let doneHtml = "";
 
   tasks.forEach((t, i) => {
 
+    // đơn đã giao
     if (t.delivered) {
       doneHtml += `
         <tr>
@@ -199,7 +161,7 @@ function render() {
     html += `
     <tr>
       <td>${t.name}</td>
-      <td>${t.note}</td>
+      <td class="note">${t.note}</td>
       <td>${t.received}</td>
       <td>${t.delivery}</td>
 
@@ -210,7 +172,7 @@ function render() {
 
       <td>${t.done ? "✔" : ""}</td>
 
-      <td onclick="toggleDelivered(${i})">
+      <td onclick="toggle(${i},'delivered')">
         <div class="check ${t.delivered?'done':''}"></div>
       </td>
     </tr>
