@@ -75,34 +75,37 @@ io.on("connection", (socket) => {
   });
 
   /* ===== ADD TASK ===== */
-  socket.on("add", (task) => {
+ socket.on("add", (task) => {
 
-    if (socket.role !== "admin") {
-      socket.emit("error_msg", "No permission");
-      return;
-    }
+  if (!socket.role) {
+    socket.emit("error_msg", "Chưa login");
+    return;
+  }
 
-    if (!task?.name) return;
+  if (socket.role !== "admin") {
+    socket.emit("error_msg", "Không có quyền");
+    return;
+  }
 
-    tasks.push({
-      name: task.name,
-      note: task.note || "",
-      received: task.received || "",
-      delivery: task.delivery || "",
+  if (!task?.name) return;
 
-      cat: false,
-      dan: false,
-      son: false,
-      lap: false,
-      done: false,
-      delivered: false,
+  tasks.push({
+    name: task.name,
+    note: task.note || "",
+    received: task.received || "",
+    delivery: task.delivery || "",
 
-      createdBy: socket.user
-    });
-
-    save(tasks);
-    io.emit("data", tasks);
+    cat: false,
+    dan: false,
+    son: false,
+    lap: false,
+    done: false,
+    delivered: false,
   });
+
+  save(tasks);
+  io.emit("data", tasks);
+});
 
   /* ===== TOGGLE ===== */
   socket.on("toggle", ({ index, field }) => {
