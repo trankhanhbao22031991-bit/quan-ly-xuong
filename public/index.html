@@ -7,29 +7,30 @@
 
 <style>
 body {
-  font-family: Arial;
-  background: #f4f6f9;
-  padding: 15px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f1f3f6;
+  padding: 20px;
 }
 
 h2 {
   text-align: center;
+  margin-bottom: 20px;
 }
 
+/* INPUT BOX */
 .box {
   background: white;
   padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  margin-bottom: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
 input {
   padding: 10px;
   margin: 5px;
-  width: 40%;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  width: 42%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 button {
@@ -37,54 +38,94 @@ button {
   background: black;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-/* timeline */
-.timeline {
+/* CARD */
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin-bottom: 15px;
+}
+
+.header {
   display: flex;
   justify-content: space-between;
-  margin-top: 15px;
-  position: relative;
+  margin-bottom: 15px;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.worker {
+  font-size: 13px;
+  color: gray;
+}
+
+/* TIMELINE */
+.timeline {
+  display: flex;
+  align-items: center;
 }
 
 .step {
-  text-align: center;
   flex: 1;
+  text-align: center;
   position: relative;
-}
-
-.circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #ccc;
-  margin: auto;
-  cursor: pointer;
-}
-
-.circle.done {
-  background: black;
 }
 
 .line {
   position: absolute;
-  top: 10px;
+  top: 9px;
   left: 50%;
   width: 100%;
   height: 2px;
-  background: #ccc;
+  background: #e5e7eb;
+  z-index: -1;
+}
+
+.step:last-child .line {
+  display: none;
+}
+
+/* TICK */
+.tick {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #bbb;
+  border-radius: 5px;
+  margin: auto;
+  cursor: pointer;
+  position: relative;
+  transition: 0.2s;
+}
+
+.tick.done {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.tick.done::after {
+  content: "✔";
+  color: white;
+  font-size: 12px;
+  position: absolute;
+  top: -2px;
+  left: 3px;
 }
 
 .label {
-  margin-top: 8px;
-  font-size: 13px;
+  font-size: 12px;
+  margin-top: 6px;
 }
 
 .date {
-  font-size: 11px;
-  color: gray;
+  font-size: 10px;
+  color: #999;
 }
 </style>
 </head>
@@ -99,7 +140,7 @@ button {
   <button onclick="add()">➕ Thêm</button>
 </div>
 
-<div id="table"></div>
+<div id="list"></div>
 
 <script>
 const socket = io();
@@ -141,12 +182,15 @@ function render() {
   tasks.forEach((t, i) => {
 
     html += `
-      <div class="box">
-        <h3>${t.name} - 👷 ${t.worker}</h3>
+      <div class="card">
+        <div class="header">
+          <div class="name">${t.name}</div>
+          <div class="worker">👷 ${t.worker}</div>
+        </div>
 
         <div class="timeline">
 
-          ${step("Tiếp nhận", true, t.ngayNhan)}
+          ${step("Nhận", true, t.ngayNhan)}
 
           ${step("Cắt", t.cat, "", i, "cat")}
           ${step("Dán chỉ", t.dan, "", i, "dan")}
@@ -159,18 +203,18 @@ function render() {
     `;
   });
 
-  document.getElementById("table").innerHTML = html;
+  document.getElementById("list").innerHTML = html;
 }
 
 function step(label, done, date, i, field) {
   return `
     <div class="step">
-      <div class="circle ${done ? 'done' : ''}"
+      <div class="tick ${done ? 'done' : ''}"
         ${field ? `onclick="toggle(${i}, '${field}')"` : ''}
       ></div>
 
       <div class="label">${label}</div>
-      <div class="date">${date || "--"}</div>
+      <div class="date">${date || ""}</div>
 
       <div class="line"></div>
     </div>
