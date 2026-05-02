@@ -26,8 +26,8 @@ body {
   width: 100%;
   margin-bottom: 10px;
   padding: 10px;
-  border: 1px solid #ddd;
   border-radius: 8px;
+  border: 1px solid #ddd;
 }
 
 #loginBox button {
@@ -37,91 +37,64 @@ body {
   color: white;
   border: none;
   border-radius: 8px;
-  cursor: pointer;
 }
 
 /* MAIN */
-.main {
-  display: none;
-  padding: 20px;
-}
+.main { display:none; padding:20px; }
 
-/* BOX */
 .box {
-  background: white;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  background:white;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
 
 input {
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  outline: none;
+  padding:8px;
+  border:1px solid #ddd;
+  border-radius:6px;
 }
 
 button {
-  padding: 10px 14px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+  padding:8px 12px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:6px;
 }
 
-/* TABLE */
 table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  width:100%;
+  background:white;
+  border-collapse:collapse;
 }
 
 th {
-  background: #111827;
-  color: white;
-  padding: 12px;
-  font-size: 12px;
+  background:#111827;
+  color:white;
+  padding:10px;
 }
 
 td {
-  padding: 12px;
-  border-top: 1px solid #eee;
-  text-align: center;
-  font-size: 13px;
+  padding:10px;
+  border-top:1px solid #eee;
+  text-align:center;
 }
 
-td.note {
-  text-align: left;
-  max-width: 260px;
-  word-break: break-word;
-}
-
-/* CHECK */
 .check {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  border: 2px solid #9ca3af;
-  margin: auto;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
+  width:18px;
+  height:18px;
+  border:2px solid #999;
+  border-radius:5px;
+  margin:auto;
+  cursor:pointer;
 }
 
 .check.done {
-  background: #22c55e;
-  border-color: #22c55e;
+  background:#22c55e;
 }
 </style>
 </head>
@@ -130,16 +103,14 @@ td.note {
 
 <!-- LOGIN -->
 <div id="loginBox">
-  <h3>Đăng nhập hệ thống</h3>
-  <input id="username" placeholder="Username">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Đăng nhập</button>
+  <h3>Login</h3>
+  <input id="username" placeholder="username">
+  <input id="password" type="password" placeholder="password">
+  <button onclick="login()">Login</button>
 </div>
 
 <!-- MAIN -->
 <div class="main" id="main">
-
-<h3>📦 Đơn đang làm</h3>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
@@ -156,29 +127,15 @@ td.note {
 <th>Ghi chú</th>
 <th>Nhận</th>
 <th>Giao</th>
-<th>Cắt CNC</th>
-<th>Dán chỉ</th>
-<th>Dán flim</th>
-<th>Làm nguội</th>
+<th>Cắt</th>
+<th>Dán</th>
+<th>Sơn</th>
+<th>Lắp</th>
 <th>Xong</th>
 <th>Đã giao</th>
 </tr>
 </thead>
 <tbody id="table"></tbody>
-</table>
-
-<h3>🚚 Đã giao</h3>
-
-<table>
-<thead>
-<tr>
-<th>Sản phẩm</th>
-<th>Ghi chú</th>
-<th>Nhận</th>
-<th>Giao</th>
-</tr>
-</thead>
-<tbody id="doneTable"></tbody>
 </table>
 
 </div>
@@ -190,31 +147,23 @@ let tasks = [];
 
 /* ================= LOGIN ================= */
 function login() {
-  const u = document.getElementById("username").value;
-  const p = document.getElementById("password").value;
-
   socket.emit("login", {
-    username: u,
-    password: p
+    username: document.getElementById("username").value,
+    password: document.getElementById("password").value
   });
 }
 
-/* login success */
 socket.on("login_success", (data) => {
   role = data.role;
-
-  console.log("LOGIN OK:", data);
 
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("main").style.display = "block";
 
-  // load data ngay lập tức
   socket.emit("request_data");
 });
 
-/* login fail */
 socket.on("login_fail", () => {
-  alert("Sai tài khoản hoặc mật khẩu");
+  alert("Sai tài khoản");
 });
 
 /* ================= DATA ================= */
@@ -226,7 +175,7 @@ socket.on("data", (data) => {
 /* ================= ADD ================= */
 function add() {
   if (role !== "admin") {
-    alert("Chỉ admin được thêm đơn");
+    alert("No permission");
     return;
   }
 
@@ -236,11 +185,6 @@ function add() {
     received: document.getElementById("received").value,
     delivery: document.getElementById("delivery").value
   });
-
-  document.getElementById("name").value = "";
-  document.getElementById("note").value = "";
-  document.getElementById("received").value = "";
-  document.getElementById("delivery").value = "";
 }
 
 /* ================= TOGGLE ================= */
@@ -248,58 +192,41 @@ function toggle(i, field) {
   socket.emit("toggle", { index: i, field });
 }
 
-/* FIX riêng cho "đã giao" */
 function toggleDelivered(i) {
-  if (role !== "admin") {
-    alert("Chỉ admin được tick đã giao");
-    return;
-  }
-
+  if (role !== "admin") return;
   socket.emit("toggle", { index: i, field: "delivered" });
 }
 
 /* ================= RENDER ================= */
 function render() {
   let html = "";
-  let doneHtml = "";
 
   tasks.forEach((t, i) => {
 
-    if (t.delivered) {
-      doneHtml += `
-        <tr>
-          <td>${t.name}</td>
-          <td>${t.note}</td>
-          <td>${t.received}</td>
-          <td>${t.delivery}</td>
-        </tr>
-      `;
-      return;
-    }
+    if (t.delivered) return;
 
     html += `
     <tr>
       <td>${t.name}</td>
-      <td class="note">${t.note}</td>
+      <td>${t.note}</td>
       <td>${t.received}</td>
       <td>${t.delivery}</td>
 
-      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}">✓</div></td>
-      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}">✓</div></td>
-      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}">✓</div></td>
-      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}">✓</div></td>
+      <td onclick="toggle(${i},'cat')"><div class="check ${t.cat?'done':''}"></div></td>
+      <td onclick="toggle(${i},'dan')"><div class="check ${t.dan?'done':''}"></div></td>
+      <td onclick="toggle(${i},'son')"><div class="check ${t.son?'done':''}"></div></td>
+      <td onclick="toggle(${i},'lap')"><div class="check ${t.lap?'done':''}"></div></td>
 
       <td>${t.done ? "✔" : ""}</td>
 
       <td onclick="toggleDelivered(${i})">
-        <div class="check ${t.delivered?'done':''}">✓</div>
+        <div class="check ${t.delivered?'done':''}"></div>
       </td>
     </tr>
     `;
   });
 
   document.getElementById("table").innerHTML = html;
-  document.getElementById("doneTable").innerHTML = doneHtml;
 }
 </script>
 
