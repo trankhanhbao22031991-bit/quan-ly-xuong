@@ -7,9 +7,36 @@
 
 <style>
 body { font-family: Arial; background:#f3f4f6; padding:20px; }
-.box { background:#fff; padding:10px; margin-bottom:10px; border:1px solid #ddd; }
 
-table { width:100%; background:#fff; border-collapse:collapse; margin-bottom:20px; }
+h2 { margin-bottom:10px; }
+
+.box {
+  background:#fff;
+  padding:10px;
+  margin-bottom:15px;
+  border:1px solid #ddd;
+}
+
+input {
+  padding:8px;
+  margin-right:5px;
+}
+
+button {
+  padding:8px 12px;
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+
+table {
+  width:100%;
+  background:#fff;
+  border-collapse:collapse;
+  margin-bottom:20px;
+}
+
 th { background:#e5e7eb; padding:10px; }
 td { padding:10px; border-top:1px solid #eee; text-align:center; }
 
@@ -25,7 +52,7 @@ tr.done { background:#dcfce7; }
 
 <body>
 
-<h3>Đơn đang làm</h3>
+<h2>Đơn đang làm</h2>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
@@ -51,7 +78,7 @@ tr.done { background:#dcfce7; }
 <tbody id="table"></tbody>
 </table>
 
-<h3>Đơn đã giao</h3>
+<h2>Đơn đã giao</h2>
 
 <table>
 <thead>
@@ -74,15 +101,24 @@ socket.on("data", (data) => {
 });
 
 function add() {
-  socket.emit("add", {
-    name: name.value,
-    received: received.value,
-    delivery: delivery.value
-  });
+  const nameInput = document.getElementById("name");
+  const receivedInput = document.getElementById("received");
+  const deliveryInput = document.getElementById("delivery");
 
-  name.value = "";
-  received.value = "";
-  delivery.value = "";
+  const name = nameInput.value.trim();
+  const received = receivedInput.value;
+  const delivery = deliveryInput.value;
+
+  if (!name) {
+    alert("Nhập tên sản phẩm");
+    return;
+  }
+
+  socket.emit("add", { name, received, delivery });
+
+  nameInput.value = "";
+  receivedInput.value = "";
+  deliveryInput.value = "";
 }
 
 function toggle(i, field) {
@@ -95,7 +131,6 @@ function render() {
 
   tasks.forEach((t, i) => {
 
-    // đơn đã giao
     if (t.delivered) {
       doneHtml += `
         <tr>
