@@ -5,58 +5,49 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: { origin: "*" },
-  transports: ["websocket", "polling"]
+  transports: ["websocket"]
 });
 
 const FILE = "tasks.json";
 
-/* LOAD */
+/* LOAD DATA */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
-    return JSON.parse(fs.readFileSync(FILE, "utf-8"));
+    return JSON.parse(fs.readFileSync(FILE));
   } catch {
     return [];
   }
 }
 
-/* SAVE */
+/* SAVE DATA */
 function save(data) {
-  try {
-    fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.log("SAVE ERROR:", err);
-  }
+  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
 let tasks = load();
 
 app.use(express.static("public"));
 
+/* SOCKET */
 io.on("connection", (socket) => {
 
-  console.log("CLIENT CONNECTED");
+  console.log("client connected");
 
   socket.emit("data", tasks);
 
-  /* ================= ADD FIX ================= */
-  socket.on("add", (task) => {
+  /* ADD */
+  socket.on("add", (t) => {
 
-    console.log("ADD RECEIVED:", task);
+    if (!t?.name) return;
 
-    if (!task || !task.name || task.name.trim() === "") {
-      console.log("INVALID TASK");
-      return;
-    }
-
-    const newTask = {
-      name: task.name.trim(),
-      note: task.note || "",
-      received: task.received || "",
-      delivery: task.delivery || "",
+    tasks.push({
+      name: t.name,
+      note: t.note || "",
+      received: t.received || "",
+      delivery: t.delivery || "",
 
       cat: false,
       dan: false,
@@ -64,30 +55,25 @@ io.on("connection", (socket) => {
       lap: false,
       done: false,
       delivered: false
-    };
-
-    tasks.push(newTask);
+    });
 
     save(tasks);
-
     io.emit("data", tasks);
-
-    console.log("ADD SUCCESS");
   });
 
   /* TOGGLE */
   socket.on("toggle", ({ index, field }) => {
 
-    const t = tasks[index];
-    if (!t) return;
+    const task = tasks[index];
+    if (!task) return;
 
-    t[field] = !t[field];
+    task[field] = !task[field];
 
-    t.done =
-      t.cat &&
-      t.dan &&
-      t.son &&
-      t.lap;
+    task.done =
+      task.cat &&
+      task.dan &&
+      task.son &&
+      task.lap;
 
     save(tasks);
     io.emit("data", tasks);
@@ -96,5 +82,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(process.env.PORT || 3000, () => {
-  console.log("SERVER RUNNING");
+  console.log("Server running");
 });
