@@ -9,14 +9,14 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const FILE = "tasks.json";
 
-/* ================= USERS DATABASE ================= */
+/* ================= USERS ================= */
 const users = [
   { username: "admin", password: "123456", role: "admin" },
   { username: "tho1", password: "123456", role: "worker" },
   { username: "tho2", password: "123456", role: "worker" }
 ];
 
-/* ================= LOAD DATA ================= */
+/* ================= LOAD / SAVE ================= */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
@@ -40,7 +40,9 @@ io.on("connection", (socket) => {
   socket.user = null;
   socket.role = null;
 
-  /* ===== LOGIN ===== */
+  console.log("USER CONNECTED");
+
+  /* ================= LOGIN ================= */
   socket.on("login", ({ username, password }) => {
 
     const user = users.find(
@@ -60,10 +62,16 @@ io.on("connection", (socket) => {
       role: user.role
     });
 
+    // gửi data ngay khi login
     socket.emit("data", tasks);
   });
 
-  /* ===== ADD (ADMIN ONLY) ===== */
+  /* ================= REQUEST DATA (FIX CHẬM) ================= */
+  socket.on("request_data", () => {
+    socket.emit("data", tasks);
+  });
+
+  /* ================= ADD ================= */
   socket.on("add", (task) => {
     if (socket.role !== "admin") return;
 
@@ -87,21 +95,23 @@ io.on("connection", (socket) => {
     io.emit("data", tasks);
   });
 
-  /* ===== TOGGLE ===== */
+  /* ================= TOGGLE ================= */
   socket.on("toggle", ({ index, field }) => {
 
-    if (!tasks[index]) return;
+    const t = tasks[index];
+    if (!t) return;
 
-    // worker KHÔNG được set delivered
-    if (socket.role === "worker" && field === "delivered") return;
+    // worker không được tick delivered
+    if (field === "delivered" && socket.role !== "admin") return;
 
-    tasks[index][field] = !tasks[index][field];
+    t[field] = !t[field];
 
-    tasks[index].done =
-      tasks[index].cat &&
-      tasks[index].dan &&
-      tasks[index].son &&
-      tasks[index].lap;
+    // auto done
+    t.done =
+      t.cat &&
+      t.dan &&
+      t.son &&
+      t.lap;
 
     save(tasks);
     io.emit("data", tasks);
