@@ -5,14 +5,15 @@ const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: { origin: "*" },
-  transports: ["websocket"]
+  transports: ["websocket", "polling"]
 });
 
 const FILE = "tasks.json";
 
-/* LOAD DATA */
+/* LOAD */
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
@@ -22,7 +23,7 @@ function load() {
   }
 }
 
-/* SAVE DATA */
+/* SAVE */
 function save(data) {
   fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
@@ -31,23 +32,27 @@ let tasks = load();
 
 app.use(express.static("public"));
 
-/* SOCKET */
 io.on("connection", (socket) => {
 
-  console.log("client connected");
+  console.log("CLIENT CONNECTED");
 
   socket.emit("data", tasks);
 
-  /* ADD */
-  socket.on("add", (t) => {
+  /* ================= ADD FIX ================= */
+  socket.on("add", (task) => {
 
-    if (!t?.name) return;
+    console.log("ADD EVENT RECEIVED:", task);
 
-    tasks.push({
-      name: t.name,
-      note: t.note || "",
-      received: t.received || "",
-      delivery: t.delivery || "",
+    if (!task || !task.name) {
+      console.log("INVALID TASK");
+      return;
+    }
+
+    const newTask = {
+      name: task.name,
+      note: task.note || "",
+      received: task.received || "",
+      delivery: task.delivery || "",
 
       cat: false,
       dan: false,
@@ -55,25 +60,30 @@ io.on("connection", (socket) => {
       lap: false,
       done: false,
       delivered: false
-    });
+    };
+
+    tasks.push(newTask);
 
     save(tasks);
+
     io.emit("data", tasks);
+
+    console.log("TASK ADDED SUCCESS");
   });
 
   /* TOGGLE */
   socket.on("toggle", ({ index, field }) => {
 
-    const task = tasks[index];
-    if (!task) return;
+    const t = tasks[index];
+    if (!t) return;
 
-    task[field] = !task[field];
+    t[field] = !t[field];
 
-    task.done =
-      task.cat &&
-      task.dan &&
-      task.son &&
-      task.lap;
+    t.done =
+      t.cat &&
+      t.dan &&
+      t.son &&
+      t.lap;
 
     save(tasks);
     io.emit("data", tasks);
@@ -82,5 +92,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+  console.log("SERVER RUNNING");
 });
