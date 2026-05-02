@@ -17,7 +17,7 @@ const FILE = "tasks.json";
 function load() {
   try {
     if (!fs.existsSync(FILE)) return [];
-    return JSON.parse(fs.readFileSync(FILE));
+    return JSON.parse(fs.readFileSync(FILE, "utf-8"));
   } catch {
     return [];
   }
@@ -25,7 +25,11 @@ function load() {
 
 /* SAVE */
 function save(data) {
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.log("SAVE ERROR:", err);
+  }
 }
 
 let tasks = load();
@@ -41,15 +45,15 @@ io.on("connection", (socket) => {
   /* ================= ADD FIX ================= */
   socket.on("add", (task) => {
 
-    console.log("ADD EVENT RECEIVED:", task);
+    console.log("ADD RECEIVED:", task);
 
-    if (!task || !task.name) {
+    if (!task || !task.name || task.name.trim() === "") {
       console.log("INVALID TASK");
       return;
     }
 
     const newTask = {
-      name: task.name,
+      name: task.name.trim(),
       note: task.note || "",
       received: task.received || "",
       delivery: task.delivery || "",
@@ -68,7 +72,7 @@ io.on("connection", (socket) => {
 
     io.emit("data", tasks);
 
-    console.log("TASK ADDED SUCCESS");
+    console.log("ADD SUCCESS");
   });
 
   /* TOGGLE */
