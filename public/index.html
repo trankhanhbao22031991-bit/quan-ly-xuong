@@ -34,50 +34,58 @@ input {
 
 button {
   padding: 10px 15px;
-  background: #007bff;
+  background: black;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
 }
 
-button:hover {
-  background: #0056b3;
+/* timeline */
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+  position: relative;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-th {
-  background: #007bff;
-  color: white;
-  padding: 10px;
-}
-
-td {
-  padding: 10px;
+.step {
   text-align: center;
-  border-bottom: 1px solid #eee;
+  flex: 1;
+  position: relative;
 }
 
-tr.done {
-  background: #d4edda;
-}
-
-.tick {
-  font-size: 20px;
+.circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ccc;
+  margin: auto;
   cursor: pointer;
-  font-weight: bold;
 }
 
-.green { color: green; }
-.red { color: red; }
+.circle.done {
+  background: black;
+}
 
+.line {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #ccc;
+}
+
+.label {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.date {
+  font-size: 11px;
+  color: gray;
+}
 </style>
 </head>
 
@@ -91,22 +99,7 @@ tr.done {
   <button onclick="add()">➕ Thêm</button>
 </div>
 
-<div class="box">
-<table>
-  <thead>
-    <tr>
-      <th>Sản phẩm</th>
-      <th>Người</th>
-      <th>Cắt</th>
-      <th>Dán</th>
-      <th>Sơn</th>
-      <th>Làm nguội</th>
-      <th>Xong</th>
-    </tr>
-  </thead>
-  <tbody id="table"></tbody>
-</table>
-</div>
+<div id="table"></div>
 
 <script>
 const socket = io();
@@ -126,6 +119,7 @@ function add() {
   socket.emit("add", {
     name,
     worker,
+    ngayNhan: new Date().toLocaleDateString(),
     cat: false,
     dan: false,
     son: false,
@@ -146,39 +140,41 @@ function render() {
 
   tasks.forEach((t, i) => {
 
-    t.cat = t.cat || false;
-    t.dan = t.dan || false;
-    t.son = t.son || false;
-    t.lap = t.lap || false;
-    t.done = t.done || false;
-
     html += `
-      <tr class="${t.done ? 'done' : ''}">
-        <td>${t.name}</td>
-        <td>${t.worker}</td>
+      <div class="box">
+        <h3>${t.name} - 👷 ${t.worker}</h3>
 
-        <td class="tick ${t.cat?'green':'red'}" onclick="toggle(${i},'cat')">
-          ${t.cat ? '✔' : '✘'}
-        </td>
+        <div class="timeline">
 
-        <td class="tick ${t.dan?'green':'red'}" onclick="toggle(${i},'dan')">
-          ${t.dan ? '✔' : '✘'}
-        </td>
+          ${step("Tiếp nhận", true, t.ngayNhan)}
 
-        <td class="tick ${t.son?'green':'red'}" onclick="toggle(${i},'son')">
-          ${t.son ? '✔' : '✘'}
-        </td>
+          ${step("Cắt", t.cat, "", i, "cat")}
+          ${step("Dán chỉ", t.dan, "", i, "dan")}
+          ${step("Dán film", t.son, "", i, "son")}
+          ${step("Làm nguội", t.lap, "", i, "lap")}
+          ${step("Hoàn thành", t.done, "")}
 
-        <td class="tick ${t.lap?'green':'red'}" onclick="toggle(${i},'lap')">
-          ${t.lap ? '✔' : '✘'}
-        </td>
-
-        <td class="tick">${t.done ? '✔' : ''}</td>
-      </tr>
+        </div>
+      </div>
     `;
   });
 
   document.getElementById("table").innerHTML = html;
+}
+
+function step(label, done, date, i, field) {
+  return `
+    <div class="step">
+      <div class="circle ${done ? 'done' : ''}"
+        ${field ? `onclick="toggle(${i}, '${field}')"` : ''}
+      ></div>
+
+      <div class="label">${label}</div>
+      <div class="date">${date || "--"}</div>
+
+      <div class="line"></div>
+    </div>
+  `;
 }
 </script>
 
