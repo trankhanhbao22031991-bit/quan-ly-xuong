@@ -101,6 +101,7 @@ td {
 td.note {
   text-align: left;
   max-width: 260px;
+  word-break: break-word;
 }
 
 /* CHECK */
@@ -167,6 +168,7 @@ td.note {
 </table>
 
 <h3>🚚 Đã giao</h3>
+
 <table>
 <thead>
 <tr>
@@ -183,15 +185,14 @@ td.note {
 
 <script>
 const socket = io();
-
 let role = null;
 let tasks = [];
 
 /* ================= LOGIN ================= */
 function login() {
   socket.emit("login", {
-    username: username.value,
-    password: password.value
+    username: document.getElementById("username").value,
+    password: document.getElementById("password").value
   });
 }
 
@@ -220,16 +221,16 @@ function add() {
   }
 
   socket.emit("add", {
-    name: name.value,
-    note: note.value,
-    received: received.value,
-    delivery: delivery.value
+    name: document.getElementById("name").value,
+    note: document.getElementById("note").value,
+    received: document.getElementById("received").value,
+    delivery: document.getElementById("delivery").value
   });
 
-  name.value = "";
-  note.value = "";
-  received.value = "";
-  delivery.value = "";
+  document.getElementById("name").value = "";
+  document.getElementById("note").value = "";
+  document.getElementById("received").value = "";
+  document.getElementById("delivery").value = "";
 }
 
 /* ================= TOGGLE ================= */
