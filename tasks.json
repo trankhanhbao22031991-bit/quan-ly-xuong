@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "name": "Tủ bếp A",
+    "received": "2026-05-02",
+    "delivery": "2026-05-05",
+    "cat": false,
+    "dan": false,
+    "son": false,
+    "lap": false,
+    "done": false,
+    "delivered": false
+  }
+]
