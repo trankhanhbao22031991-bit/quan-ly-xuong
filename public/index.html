@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Quản lý xưởng</title>
+<title>Quản lý xưởng PRO</title>
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
@@ -12,23 +12,43 @@ body {
   padding: 20px;
 }
 
-/* header */
-h2 {
-  margin-bottom: 10px;
+/* DASHBOARD */
+.dashboard {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
-/* form */
-.box {
-  background: #fff;
+.card {
+  flex: 1;
+  background: white;
   padding: 15px;
   border-radius: 10px;
-  margin-bottom: 20px;
+  text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.card p {
+  margin: 5px 0 0;
+  color: #666;
+}
+
+/* FORM */
+.box {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
 }
 
 input {
   padding: 10px;
-  margin-right: 8px;
+  margin-right: 5px;
   border: 1px solid #ddd;
   border-radius: 6px;
 }
@@ -42,21 +62,16 @@ button {
   cursor: pointer;
 }
 
-button:hover {
-  background: #1d4ed8;
-}
-
-/* table */
+/* TABLE */
 .table-wrap {
   max-height: 400px;
   overflow: auto;
-  border-radius: 10px;
 }
 
 table {
   width: 100%;
+  background: white;
   border-collapse: collapse;
-  background: #fff;
 }
 
 th {
@@ -64,13 +79,12 @@ th {
   top: 0;
   background: #1e293b;
   color: white;
-  padding: 12px;
-  z-index: 1;
+  padding: 10px;
 }
 
 td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 10px;
+  border-top: 1px solid #eee;
   text-align: center;
 }
 
@@ -78,21 +92,19 @@ tr:hover {
   background: #f9fafb;
 }
 
-tr.done {
-  background: #dcfce7;
-}
+tr.done { background: #dcfce7; }
+tr.late { background: #fee2e2; }
 
-tr.late {
-  background: #fee2e2;
-}
-
-/* checkbox */
+/* CHECKBOX XỊN */
 .check {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   border: 2px solid #94a3b8;
   margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: 0.2s;
 }
@@ -100,26 +112,39 @@ tr.late {
 .check.done {
   background: #22c55e;
   border-color: #22c55e;
+  animation: pop 0.2s ease;
 }
 
-/* badge */
-.badge {
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 11px;
-  margin-left: 5px;
+@keyframes pop {
+  0% { transform: scale(0.5); }
+  100% { transform: scale(1); }
 }
 
-.badge.late {
-  background: #ef4444;
-  color: white;
+/* SEARCH */
+.search {
+  margin-bottom: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>📦 Đơn đang làm</h2>
+<h2>📊 Tổng quan</h2>
+
+<div class="dashboard">
+  <div class="card">
+    <h3 id="countDoing">0</h3>
+    <p>Đang làm</p>
+  </div>
+  <div class="card">
+    <h3 id="countLate">0</h3>
+    <p>Trễ</p>
+  </div>
+  <div class="card">
+    <h3 id="countDone">0</h3>
+    <p>Đã giao</p>
+  </div>
+</div>
 
 <div class="box">
   <input id="name" placeholder="Tên sản phẩm">
@@ -128,6 +153,8 @@ tr.late {
   <button onclick="add()">➕ Thêm</button>
 </div>
 
+<input id="search" class="search" placeholder="🔍 Tìm sản phẩm..." oninput="render()">
+
 <div class="table-wrap">
 <table>
 <thead>
@@ -135,10 +162,10 @@ tr.late {
 <th>Sản phẩm</th>
 <th>Nhận</th>
 <th>Giao</th>
-<th>Cắt</th>
-<th>Dán</th>
-<th>Sơn</th>
-<th>Lắp</th>
+<th>Cắt CNC</th>
+<th>Dán chỉ</th>
+<th>Dán flim</th>
+<th>Làm nguội</th>
 <th>Xong</th>
 <th>Đã giao</th>
 </tr>
@@ -148,15 +175,7 @@ tr.late {
 </div>
 
 <h2>🚚 Đơn đã giao</h2>
-
 <table>
-<thead>
-<tr>
-<th>Sản phẩm</th>
-<th>Nhận</th>
-<th>Giao</th>
-</tr>
-</thead>
 <tbody id="doneTable"></tbody>
 </table>
 
@@ -170,24 +189,15 @@ socket.on("data", (data) => {
 });
 
 function add() {
-  const nameInput = document.getElementById("name");
-  const receivedInput = document.getElementById("received");
-  const deliveryInput = document.getElementById("delivery");
+  const name = document.getElementById("name").value.trim();
+  const received = document.getElementById("received").value;
+  const delivery = document.getElementById("delivery").value;
 
-  const name = nameInput.value.trim();
-  const received = receivedInput.value;
-  const delivery = deliveryInput.value;
-
-  if (!name) {
-    alert("Nhập tên sản phẩm");
-    return;
-  }
+  if (!name) return alert("Nhập tên");
 
   socket.emit("add", { name, received, delivery });
 
-  nameInput.value = "";
-  receivedInput.value = "";
-  deliveryInput.value = "";
+  document.getElementById("name").value = "";
 }
 
 function toggle(i, field) {
@@ -198,65 +208,56 @@ function render() {
   let html = "";
   let doneHtml = "";
 
+  const keyword = document.getElementById("search").value.toLowerCase();
   const today = new Date().toISOString().split("T")[0];
+
+  let doing = 0, late = 0, done = 0;
 
   tasks.forEach((t, i) => {
 
-    // đã giao
+    if (!t.name.toLowerCase().includes(keyword)) return;
+
     if (t.delivered) {
-      doneHtml += `
-        <tr>
-          <td><b>${t.name}</b></td>
-          <td>${t.received || ""}</td>
-          <td>${t.delivery || ""}</td>
-        </tr>
-      `;
+      done++;
+      doneHtml += `<tr><td>${t.name}</td><td>${t.received}</td><td>${t.delivery}</td></tr>`;
       return;
     }
 
-    // check trễ
+    doing++;
+
     const isLate = t.delivery && t.delivery < today && !t.done;
+    if (isLate) late++;
 
     html += `
-    <tr class="${t.done ? 'done' : ''} ${isLate ? 'late' : ''}">
-      <td><b>${t.name}</b></td>
+    <tr class="${t.done?'done':''} ${isLate?'late':''}">
+      <td>${t.name}</td>
+      <td>${t.received||""}</td>
+      <td>${t.delivery||""}</td>
 
-      <td>${t.received || ""}</td>
-
-      <td>
-        ${t.delivery || ""}
-        ${isLate ? '<span class="badge late">Trễ</span>' : ''}
-      </td>
-
-      <td onclick="toggle(${i},'cat')">
-        <div class="check ${t.cat?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'dan')">
-        <div class="check ${t.dan?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'son')">
-        <div class="check ${t.son?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'lap')">
-        <div class="check ${t.lap?'done':''}"></div>
-      </td>
-
-      <td>
-        <div class="check ${t.done?'done':''}"></div>
-      </td>
-
-      <td onclick="toggle(${i},'delivered')">
-        <div class="check ${t.delivered?'done':''}"></div>
-      </td>
-    </tr>
-    `;
+      ${makeCheck(i,'cat',t.cat)}
+      ${makeCheck(i,'dan',t.dan)}
+      ${makeCheck(i,'son',t.son)}
+      ${makeCheck(i,'lap',t.lap)}
+      ${makeCheck(-1,'done',t.done,false)}
+      ${makeCheck(i,'delivered',t.delivered)}
+    </tr>`;
   });
 
   document.getElementById("table").innerHTML = html;
   document.getElementById("doneTable").innerHTML = doneHtml;
+
+  document.getElementById("countDoing").innerText = doing;
+  document.getElementById("countLate").innerText = late;
+  document.getElementById("countDone").innerText = done;
+}
+
+function makeCheck(i, field, val, clickable=true) {
+  return `
+  <td ${clickable?`onclick="toggle(${i},'${field}')"`:''}>
+    <div class="check ${val?'done':''}">
+      ${val?'✓':''}
+    </div>
+  </td>`;
 }
 </script>
 
